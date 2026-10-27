@@ -1,569 +1,890 @@
 import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  LayoutDashboard,
+  BarChart3,
   Package,
-  FolderTree,
+  LayoutGrid,
   FileText,
   Settings,
-  ExternalLink,
   LogOut,
-  MousePointerClick,
   Eye,
+  MousePointerClick,
   Plus,
   X,
   Link2,
-  Loader2,
+  LoaderCircle,
   Pencil,
   Trash2,
-  Lock,
+  Download,
+  Share2,
+  WandSparkles,
+  MessageCircle,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   apiCall,
-  formatCurrency,
+  formatMoeda,
+  normalizarImagemOg,
+  gerarMensagemWhatsapp,
+  gerarLegendaRedes,
   getStoredUser,
   setStoredUser,
 } from "@/lib/api";
-import { LOGO_URL } from "@/components/SiteLayout";
+import { Button, Input, Label, Textarea, Switch } from "@/components/ui";
 
 export function AuthPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "Login Administrativo — DNA Ofertas";
-    const user = getStoredUser();
-    if (user) {
-      navigate("/admin");
-    }
+    document.title = "Painel administrativo — DNA Ofertas";
+    const u = getStoredUser();
+    if (u) navigate("/admin", { replace: true });
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (senha.length < 6) {
+      toast.error("A senha precisa ter ao menos 6 caracteres");
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiCall<{ user: any }>("auth_signin", {
-        email,
-        password,
+        email: email.trim(),
+        password: senha,
       });
       setStoredUser(res.user);
-      toast.success("Bem-vindo ao painel!");
-      navigate("/admin");
+      navigate("/admin", { replace: true });
     } catch (err: any) {
-      toast.error(err.message || "Falha na autenticação");
+      toast.error(err.message || "E-mail ou senha incorretos.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-muted/40 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-3xl p-8 w-full max-w-md shadow-xl">
-        <div className="flex flex-col items-center text-center mb-6">
-          <img
-            src={LOGO_URL}
-            alt="DNA Ofertas"
-            className="h-14 w-auto object-contain rounded-xl mb-3"
-          />
-          <h1 className="font-display font-extrabold text-2xl">
-            Painel DNA Ofertas
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Entre com sua conta de administrador
-          </p>
-        </div>
+    <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-10">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
+        <Link
+          to="/"
+          className="text-sm font-semibold text-primary hover:underline"
+        >
+          ← Voltar para a vitrine
+        </Link>
+        <h1 className="mt-4 text-2xl font-extrabold tracking-tight">
+          Painel administrativo
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Entre para gerenciar produtos, categorias e posts.
+        </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              E-mail
-            </label>
-            <input
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
               type="email"
+              autoComplete="email"
+              maxLength={255}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-muted border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="admin@dnaofertas.com.br"
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-              Senha
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="senha">Senha</Label>
+            <Input
+              id="senha"
               type="password"
-              required
+              autoComplete="current-password"
               minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-muted border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="••••••••"
+              maxLength={72}
+              required
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <Lock className="w-4 h-4" />
-            {loading ? "Aguarde..." : "Entrar no Painel"}
-          </button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <LoaderCircle className="size-4 animate-spin" />}
+            Entrar
+          </Button>
         </form>
-
-        <div className="mt-6 pt-5 border-t border-border text-center">
-          <Link
-            to="/"
-            className="text-xs text-muted-foreground hover:text-foreground inline-block"
-          >
-            ← Voltar para o site público
-          </Link>
-        </div>
       </div>
-    </div>
+    </main>
   );
 }
 
-const navItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/produtos", label: "Produtos", icon: Package },
-  { to: "/admin/categorias", label: "Categorias", icon: FolderTree },
-  { to: "/admin/posts", label: "Blog / Posts", icon: FileText },
-  { to: "/admin/configuracoes", label: "Configurações", icon: Settings },
+const navLinks = [
+  { to: "/admin", rotulo: "Visão geral", Icon: BarChart3, exact: true },
+  { to: "/admin/produtos", rotulo: "Produtos", Icon: Package, exact: false },
+  {
+    to: "/admin/categorias",
+    rotulo: "Categorias",
+    Icon: LayoutGrid,
+    exact: false,
+  },
+  { to: "/admin/posts", rotulo: "Blog", Icon: FileText, exact: false },
+  {
+    to: "/admin/configuracoes",
+    rotulo: "Configurações",
+    Icon: Settings,
+    exact: false,
+  },
 ];
 
 export function AdminLayout() {
-  const [user, setUser] = useState(() => getStoredUser());
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState(() => getStoredUser());
 
   useEffect(() => {
-    const stored = getStoredUser();
-    if (!stored) {
-      navigate("/auth");
+    const u = getStoredUser();
+    if (!u) {
+      navigate("/auth", { replace: true });
     } else {
-      setUser(stored);
+      setUser(u);
     }
   }, [navigate]);
 
-  const handleLogout = () => {
+  async function handleLogout() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
     setStoredUser(null);
-    toast.success("Sessão encerrada");
-    navigate("/auth");
-  };
+    navigate("/auth", { replace: true });
+  }
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-foreground text-background p-5 flex flex-col shrink-0">
-        <div className="flex items-center gap-2.5 mb-8">
-          <img
-            src={LOGO_URL}
-            alt="DNA Ofertas"
-            className="h-10 w-auto object-contain rounded-lg"
-          />
-          <div>
-            <div className="font-display font-extrabold text-sm leading-none">
-              Painel
-            </div>
-            <div className="text-[11px] text-background/50">Admin</div>
-          </div>
+    <div className="min-h-screen bg-muted">
+      <header className="border-b border-border bg-brand">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
+          <Link
+            to="/"
+            className="font-extrabold tracking-tight text-brand-foreground"
+          >
+            DNA Ofertas
+          </Link>
+          <span className="rounded-full bg-brand-foreground/10 px-2 py-0.5 text-xs font-semibold text-brand-foreground">
+            Painel
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="ml-auto text-brand-foreground hover:bg-brand-foreground/10"
+          >
+            <LogOut className="size-4" />
+            Sair
+          </Button>
         </div>
+      </header>
 
-        <nav className="space-y-1 flex-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = item.end
-              ? location.pathname === item.to
-              : location.pathname.startsWith(item.to);
+      <div className="mx-auto max-w-6xl gap-6 px-4 py-6 md:flex">
+        <nav className="mb-4 flex gap-2 overflow-x-auto md:mb-0 md:w-56 md:shrink-0 md:flex-col">
+          {navLinks.map(({ to, rotulo, Icon, exact }) => {
+            const active = exact
+              ? location.pathname === to
+              : location.pathname.startsWith(to);
             return (
               <Link
-                key={item.to}
-                to={item.to}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                key={to}
+                to={to}
+                className={
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-background/70 hover:bg-background/10 hover:text-background"
-                }`}
+                    ? "flex items-center gap-2 whitespace-nowrap rounded-md border border-primary bg-card px-3 py-2 text-sm font-semibold text-primary"
+                    : "flex items-center gap-2 whitespace-nowrap rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+                }
               >
-                <Icon className="w-4 h-4" />
-                {item.label}
+                <Icon className="size-4" />
+                {rotulo}
               </Link>
             );
           })}
         </nav>
 
-        <div className="pt-4 border-t border-background/15 space-y-2 mt-6">
-          <Link
-            to="/"
-            target="_blank"
-            className="flex items-center gap-2 text-xs text-background/70 hover:text-background px-3 py-2"
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> Ver site público
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 text-xs text-destructive hover:bg-destructive/10 px-3 py-2 rounded-lg transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" /> Sair ({user.email})
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
-        <Outlet />
-      </main>
+        <main className="min-w-0 flex-1">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
 
 export function AdminDashboardPage() {
-  const { data: stats } = useQuery({
-    queryKey: ["admin-resumo"],
+  const { data: a, isLoading: f } = useQuery({
+    queryKey: ["admin", "resumo"],
     queryFn: () => apiCall<any>("admin_summary"),
   });
 
-  const { data: topProdutos = [] } = useQuery({
-    queryKey: ["admin-top-produtos"],
-    queryFn: async () => {
-      const list = await apiCall<any[]>("list_produtos", {
-        publicadoOnly: false,
-      });
-      return [...list]
-        .sort((a, b) => (b.cliques_total || 0) - (a.cliques_total || 0))
-        .slice(0, 5);
-    },
-  });
-
   const cards = [
+    { rotulo: "Produtos cadastrados", valor: a?.produtos, Icon: Package },
+    { rotulo: "Publicados na vitrine", valor: a?.publicados, Icon: Eye },
     {
-      label: "Total de Produtos",
-      val: stats?.produtos ?? 0,
-      icon: Package,
-      color: "text-primary",
+      rotulo: "Cliques em ofertas",
+      valor: a?.cliques,
+      Icon: MousePointerClick,
     },
-    {
-      label: "Ofertas Publicadas",
-      val: stats?.publicados ?? 0,
-      icon: Eye,
-      color: "text-accent",
-    },
-    {
-      label: "Total de Cliques em Afiliados",
-      val: stats?.cliques ?? 0,
-      icon: MousePointerClick,
-      color: "text-primary",
-    },
-    {
-      label: "Artigos no Blog",
-      val: stats?.posts ?? 0,
-      icon: FileText,
-      color: "text-foreground",
-    },
+    { rotulo: "Posts no blog", valor: a?.posts, Icon: FileText },
   ];
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="font-display font-extrabold text-2xl sm:text-3xl">
-            Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Visão geral de desempenho do DNA Ofertas
-          </p>
-        </div>
-        <Link
-          to="/admin/produtos"
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-semibold text-sm px-4 py-2.5 rounded-xl hover:opacity-90"
-        >
-          + Nova Oferta
-        </Link>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">Visão geral</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Resumo da vitrine e atalhos para as tarefas do dia a dia.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-        {cards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <div
-              key={c.label}
-              className="bg-card border border-border rounded-2xl p-5"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {c.label}
-                </span>
-                <Icon className={`w-5 h-5 ${c.color}`} />
-              </div>
-              <div className="font-display font-extrabold text-3xl">
-                {c.val}
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map(({ rotulo, valor, Icon }) => (
+          <div
+            key={rotulo}
+            className="rounded-md border border-border bg-card p-4 shadow-sm"
+          >
+            <Icon className="size-4 text-primary" />
+            <p className="mt-3 text-2xl font-bold">{f ? "—" : valor ?? 0}</p>
+            <p className="text-xs text-muted-foreground">{rotulo}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="font-display font-bold text-lg mb-4">
-          Ofertas Mais Clicadas
-        </h2>
-        <div className="divide-y divide-border">
-          {topProdutos.map((p: any) => (
-            <div
-              key={p.id}
-              className="py-3 flex items-center justify-between gap-4 text-sm"
-            >
-              <span className="font-medium truncate">{p.titulo}</span>
-              <span className="font-mono font-bold text-primary shrink-0">
-                {p.cliques_total || 0} cliques
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-md border border-border bg-card p-5 shadow-sm">
+        <h2 className="font-bold">Comece por aqui</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cole o link de um produto e o importador preenche título, imagem e
+          preço automaticamente.
+        </p>
+        <Button asChild className="mt-4">
+          <Link to="/admin/produtos">Importar produto</Link>
+        </Button>
       </div>
     </div>
   );
 }
 
-const emptyProduto = {
-  id: "",
+function ModalWhatsappProduto({ produto }: { produto: any }) {
+  const [open, setOpen] = useState(false);
+  const url = `${typeof window !== "undefined" ? window.location.origin : "https://dna-ofertas.com"}/produto/${produto.slug}`;
+  const imgOg = normalizarImagemOg(produto.imagem_url);
+  const [msg, setMsg] = useState(() =>
+    gerarMensagemWhatsapp({
+      titulo: produto.titulo,
+      preco: produto.preco,
+      precoOriginal: produto.preco_original,
+      chamada: produto.chamada,
+      cupons:
+        Array.isArray(produto.cupons) && produto.cupons.length > 0
+          ? produto.cupons
+          : produto.cupom
+          ? [produto.cupom]
+          : [],
+      formaPagamento: produto.forma_pagamento,
+      url,
+    })
+  );
+
+  async function copiar(texto: string, aviso: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      toast.success(aviso);
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Gerar mensagem WhatsApp"
+        onClick={() => setOpen(true)}
+      >
+        <MessageCircle className="size-4" />
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="fixed inset-0 z-50 bg-black/80"
+            onClick={() => setOpen(false)}
+          />
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+            <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+              <h3 className="text-lg font-semibold leading-none tracking-tight">
+                Mensagem para WhatsApp
+              </h3>
+            </div>
+            <div className="overflow-hidden rounded-md border border-border bg-muted">
+              {imgOg ? (
+                <img
+                  src={imgOg}
+                  alt={produto.titulo}
+                  referrerPolicy="no-referrer"
+                  className="aspect-video w-full bg-card object-contain"
+                />
+              ) : (
+                <div className="grid aspect-video place-items-center text-xs text-muted-foreground">
+                  Adicione uma imagem ao produto para gerar a prévia.
+                </div>
+              )}
+              <div className="p-2 text-xs text-muted-foreground">
+                <p className="line-clamp-1 font-semibold text-foreground">
+                  {produto.titulo}
+                </p>
+                dna-ofertas.com
+              </div>
+            </div>
+            <Textarea
+              rows={9}
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => void copiar(msg, "Mensagem copiada.")}
+              >
+                <Copy className="size-4" /> Copiar mensagem
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void copiar(url, "Link copiado.")}
+              >
+                <Link2 className="size-4" /> Copiar link
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(msg)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-4" /> Abrir no WhatsApp
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+const formInicialProduto = {
+  id: undefined as string | undefined,
   titulo: "",
-  descricao_curta: "",
-  descricao_completa: "",
-  preco_atual: "",
-  preco_antigo: "",
-  imagem_principal: "",
+  descricao: "",
+  preco: "",
+  preco_original: "",
+  imagem_url: "",
   link_afiliado: "",
+  loja: "",
+  chamada: "",
+  cupons: [""],
+  forma_pagamento: "",
   categoria_id: "",
   destaque: false,
   publicado: true,
-  cupom: "",
-  avaliacao: "4.8",
 };
+
+function parseMoeda(v: string): number | null {
+  const s = String(v || "")
+    .replace(/\s/g, "")
+    .replace(",", ".");
+  if (!s) return null;
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
 
 export function AdminProdutosPage() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<any>(emptyProduto);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [urlImport, setUrlImport] = useState("");
-  const [importing, setImporting] = useState(false);
+  const [linkImportar, setLinkImportar] = useState("");
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [C, setC] = useState(formInicialProduto);
 
-  const { data: produtos = [] } = useQuery({
-    queryKey: ["admin-produtos"],
+  const { data: T = [], isLoading: D } = useQuery({
+    queryKey: ["admin", "produtos"],
     queryFn: () => apiCall<any[]>("list_produtos", { publicadoOnly: false }),
   });
 
-  const { data: categorias = [] } = useQuery({
-    queryKey: ["admin-categorias-select"],
+  const { data: O = [] } = useQuery({
+    queryKey: ["categorias"],
     queryFn: () => apiCall<any[]>("list_categorias"),
   });
 
-  const handleImportUrl = async () => {
-    if (!urlImport.trim()) {
-      toast.error("Cole o link do produto primeiro");
-      return;
-    }
-    setImporting(true);
-    try {
-      const data = await apiCall<any>("import_url", { url: urlImport.trim() });
-      setForm((prev: any) => ({
-        ...prev,
-        titulo: data.titulo || prev.titulo,
-        descricao_curta: data.descricao_curta || prev.descricao_curta,
-        preco_atual: data.preco_atual ? String(data.preco_atual) : prev.preco_atual,
-        preco_antigo: data.preco_antigo ? String(data.preco_antigo) : prev.preco_antigo,
-        imagem_principal: data.imagem_principal || prev.imagem_principal,
-        link_afiliado: data.link_afiliado || urlImport.trim(),
-      }));
-      toast.success("Dados importados! Confira os campos antes de salvar.");
-    } catch (err: any) {
-      toast.error(
-        err.message ||
-          "Não foi possível extrair os dados automaticamente. Preencha manualmente."
+  function setCampo(chave: string, valor: any) {
+    setC((prev) => ({ ...prev, [chave]: valor }));
+  }
+
+  const importarMut = useMutation({
+    mutationFn: (url: string) => apiCall<any>("import_url", { url }),
+    onSuccess: (e) => {
+      setC({
+        ...formInicialProduto,
+        titulo: e.titulo ?? "",
+        descricao: e.descricao ?? "",
+        preco: e.preco ? String(e.preco) : "",
+        preco_original: e.preco_original ? String(e.preco_original) : "",
+        imagem_url: e.imagem_url ?? "",
+        link_afiliado: e.link_afiliado,
+        loja: e.loja ?? "",
+      });
+      setDialogAberto(true);
+      setLinkImportar("");
+      toast.success(
+        e.titulo
+          ? "Dados importados! Revise antes de salvar."
+          : "Página lida, mas sem metadados. Preencha manualmente."
       );
-      setForm((prev: any) => ({
-        ...prev,
-        link_afiliado: prev.link_afiliado || urlImport.trim(),
-      }));
-    } finally {
-      setImporting(false);
-    }
-  };
+    },
+    onError: () =>
+      toast.error("Não foi possível ler esse link. Cadastre manualmente."),
+  });
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await apiCall("upsert_produto", { produto: form });
-      toast.success(form.id ? "Produto atualizado!" : "Produto cadastrado!");
-      queryClient.invalidateQueries({ queryKey: ["admin-produtos"] });
-      setModalOpen(false);
-      setForm(emptyProduto);
-      setUrlImport("");
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+  const salvarMut = useMutation({
+    mutationFn: () =>
+      apiCall("upsert_produto", {
+        produto: {
+          id: C.id,
+          titulo: C.titulo.trim(),
+          descricao: C.descricao.trim() || null,
+          preco: parseMoeda(C.preco),
+          preco_original: parseMoeda(C.preco_original),
+          imagem_url: C.imagem_url.trim() || null,
+          link_afiliado: C.link_afiliado.trim(),
+          loja: C.loja.trim() || null,
+          chamada: C.chamada.trim() || null,
+          cupons: C.cupons.map((c) => c.trim()).filter(Boolean),
+          forma_pagamento: C.forma_pagamento.trim() || null,
+          categoria_id: C.categoria_id || null,
+          destaque: C.destaque,
+          publicado: C.publicado,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Produto salvo.");
+      setDialogAberto(false);
+      setC(formInicialProduto);
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) =>
+      toast.error(err.message || "Falha ao salvar o produto."),
+  });
 
-  const handleEdit = (p: any) => {
-    setForm({
-      id: p.id,
-      titulo: p.titulo,
-      descricao_curta: p.descricao_curta || "",
-      descricao_completa: p.descricao_completa || "",
-      preco_atual: String(p.preco_atual),
-      preco_antigo: p.preco_antigo ? String(p.preco_antigo) : "",
-      imagem_principal: p.imagem_principal,
-      link_afiliado: p.link_afiliado,
-      categoria_id: p.categoria_id || "",
-      destaque: p.destaque,
-      publicado: p.publicado,
-      cupom: p.cupom || "",
-      avaliacao: p.avaliacao ? String(p.avaliacao) : "4.8",
+  const removerMut = useMutation({
+    mutationFn: (id: string) => apiCall("delete_produto", { id }),
+    onSuccess: () => {
+      toast.success("Produto removido.");
+      queryClient.invalidateQueries();
+    },
+    onError: () => toast.error("Falha ao remover o produto."),
+  });
+
+  function abrirEdicao(e: any) {
+    setC({
+      id: e.id,
+      titulo: e.titulo,
+      descricao: e.descricao ?? "",
+      preco: e.preco ? String(e.preco) : "",
+      preco_original: e.preco_original ? String(e.preco_original) : "",
+      imagem_url: e.imagem_url ?? "",
+      link_afiliado: e.link_afiliado,
+      loja: e.loja ?? "",
+      chamada: e.chamada ?? "",
+      cupons:
+        Array.isArray(e.cupons) && e.cupons.length > 0
+          ? e.cupons
+          : e.cupom
+          ? [e.cupom]
+          : [""],
+      forma_pagamento: e.forma_pagamento ?? "",
+      categoria_id: e.categoria_id ?? "",
+      destaque: e.destaque,
+      publicado: e.publicado,
     });
-    setModalOpen(true);
-  };
+    setDialogAberto(true);
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta oferta?")) return;
+  async function copiarLegenda(e: any) {
+    const t = gerarLegendaRedes({
+      titulo: e.titulo,
+      preco: e.preco,
+      precoOriginal: e.preco_original,
+      url: `${window.location.origin}/produto/${e.slug}`,
+    });
     try {
-      await apiCall("delete_produto", { id });
-      toast.success("Produto excluído");
-      queryClient.invalidateQueries({ queryKey: ["admin-produtos"] });
-    } catch (err: any) {
-      toast.error(err.message);
+      await navigator.clipboard.writeText(t);
+      toast.success("Legenda copiada para Instagram, Facebook ou TikTok.");
+    } catch {
+      toast.error("Não foi possível copiar. Copie manualmente o link do produto.");
     }
-  };
+  }
+
+  function exportarCsv() {
+    const cab = [
+      "titulo",
+      "preco",
+      "preco_original",
+      "loja",
+      "link_afiliado",
+      "cliques",
+    ];
+    const linhas = T.map((e: any) =>
+      [
+        e.titulo,
+        e.preco ?? "",
+        e.preco_original ?? "",
+        e.loja ?? "",
+        e.link_afiliado,
+        e.cliques_total,
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",")
+    );
+    const blob = new Blob([[cab.join(","), ...linhas].join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "produtos.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display font-extrabold text-2xl">Produtos</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie todas as ofertas afiliadas
+          <h1 className="text-2xl font-extrabold tracking-tight">Produtos</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {T.length} cadastrados — importe por link ou cadastre manualmente.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setForm(emptyProduto);
-            setUrlImport("");
-            setModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-semibold text-sm px-4 py-2.5 rounded-xl"
-        >
-          <Plus className="w-4 h-4" /> Novo Produto
-        </button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={exportarCsv}
+            disabled={T.length === 0}
+          >
+            <Download className="size-4" />
+            Exportar CSV
+          </Button>
+          <Button
+            onClick={() => {
+              setC(formInicialProduto);
+              setDialogAberto(true);
+            }}
+          >
+            Novo produto
+          </Button>
+        </div>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-foreground/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-2xl my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-bold text-xl">
-                {form.id ? "Editar Produto" : "Novo Produto"}
-              </h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 hover:bg-muted rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <form
+        className="rounded-md border border-border bg-card p-4 shadow-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const t = linkImportar.trim();
+          if (!/^https?:\/\/.+/i.test(t)) {
+            toast.error("Cole um link completo começando com https://");
+            return;
+          }
+          importarMut.mutate(t);
+        }}
+      >
+        <Label htmlFor="link-importar" className="font-semibold">
+          Importar produto por link
+        </Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Cole o link de afiliado. Buscamos título, imagem e preço da página
+          automaticamente.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <Input
+            id="link-importar"
+            type="url"
+            inputMode="url"
+            maxLength={1000}
+            placeholder="https://loja.com/produto/..."
+            value={linkImportar}
+            onChange={(e) => setLinkImportar(e.target.value)}
+          />
+          <Button type="submit" disabled={importarMut.isPending}>
+            {importarMut.isPending ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <WandSparkles className="size-4" />
+            )}
+            Importar
+          </Button>
+        </div>
+      </form>
 
-            <div className="mb-5 p-3.5 rounded-xl bg-primary/5 border border-primary/20">
-              <label className="block text-xs font-bold uppercase tracking-wider text-primary mb-1.5 flex items-center gap-1.5">
-                <Link2 className="w-3.5 h-3.5" /> Importar produto por link (Amazon, Mercado Livre, Shopee, etc.)
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="url"
-                  value={urlImport}
-                  onChange={(e) => setUrlImport(e.target.value)}
-                  placeholder="Cole a URL do produto aqui para preencher automaticamente..."
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-card border border-border text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={handleImportUrl}
-                  disabled={importing}
-                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-1.5 shrink-0"
-                >
-                  {importing ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando...
-                    </>
-                  ) : (
-                    "Puxar Dados"
+      <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+        {D ? (
+          <p className="p-6 text-sm text-muted-foreground">
+            Carregando produtos…
+          </p>
+        ) : T.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">
+            Nenhum produto ainda. Importe o primeiro link acima.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {T.map((e: any) => (
+              <li key={e.id} className="flex flex-wrap items-center gap-3 p-3">
+                <div className="size-14 shrink-0 overflow-hidden rounded bg-muted">
+                  {e.imagem_url && (
+                    <img
+                      src={e.imagem_url}
+                      alt=""
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
                   )}
-                </button>
-              </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{e.titulo}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatMoeda(e.preco)} · {e.loja ?? "loja não informada"} ·{" "}
+                    {e.cliques_total} cliques
+                    {!e.publicado && " · rascunho"}
+                    {e.destaque && " · destaque"}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <ModalWhatsappProduto produto={e} />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Copiar legenda para redes sociais"
+                    onClick={() => void copiarLegenda(e)}
+                  >
+                    <Share2 className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Editar produto"
+                    onClick={() => abrirEdicao(e)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Excluir produto"
+                    onClick={() => {
+                      if (window.confirm(`Remover "${e.titulo}"?`)) {
+                        removerMut.mutate(e.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {dialogAberto && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="fixed inset-0 z-50 bg-black/80"
+            onClick={() => setDialogAberto(false)}
+          />
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:max-w-lg sm:rounded-lg">
+            <button
+              type="button"
+              onClick={() => setDialogAberto(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+            <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+              <h3 className="text-lg font-semibold leading-none tracking-tight">
+                {C.id ? "Editar produto" : "Novo produto"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                O preço original é usado para calcular o selo de desconto.
+              </p>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Título *
-                </label>
-                <input
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                salvarMut.mutate();
+              }}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="titulo">Título</Label>
+                <Input
+                  id="titulo"
                   required
-                  value={form.titulo}
-                  onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
+                  maxLength={200}
+                  value={C.titulo}
+                  onChange={(e) => setCampo("titulo", e.target.value)}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Preço Atual (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={form.preco_atual}
-                    onChange={(e) =>
-                      setForm({ ...form, preco_atual: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
+              <div className="space-y-1.5">
+                <Label htmlFor="link">Link de afiliado</Label>
+                <Input
+                  id="link"
+                  type="url"
+                  required
+                  maxLength={1000}
+                  value={C.link_afiliado}
+                  onChange={(e) => setCampo("link_afiliado", e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="preco">Preço (R$)</Label>
+                  <Input
+                    id="preco"
+                    inputMode="decimal"
+                    value={C.preco}
+                    onChange={(e) => setCampo("preco", e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Preço Antigo (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.preco_antigo}
-                    onChange={(e) =>
-                      setForm({ ...form, preco_antigo: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
+                <div className="space-y-1.5">
+                  <Label htmlFor="preco-original">Preço original (R$)</Label>
+                  <Input
+                    id="preco-original"
+                    inputMode="decimal"
+                    value={C.preco_original}
+                    onChange={(e) => setCampo("preco_original", e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Categoria
-                  </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="chamada">Chamada (WhatsApp)</Label>
+                  <Input
+                    id="chamada"
+                    maxLength={120}
+                    placeholder="NÃO SOFRA COM O CALOR"
+                    value={C.chamada}
+                    onChange={(e) => setCampo("chamada", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="cupom-0">Cupons (opcional)</Label>
+                    {C.cupons.length < 10 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCampo("cupons", [...C.cupons, ""])}
+                      >
+                        <Plus className="size-4" /> Adicionar cupom
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {C.cupons.map((cupomVal, idx) => (
+                      <div key={`cupom-${idx}`} className="flex gap-2">
+                        <Input
+                          id={`cupom-${idx}`}
+                          maxLength={60}
+                          placeholder="BARATINHO"
+                          value={cupomVal}
+                          onChange={(ev) => {
+                            const arr = [...C.cupons];
+                            arr[idx] = ev.target.value;
+                            setCampo("cupons", arr);
+                          }}
+                        />
+                        {C.cupons.length > 1 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Remover cupom ${idx + 1}`}
+                            onClick={() =>
+                              setCampo(
+                                "cupons",
+                                C.cupons.filter((_, i) => i !== idx)
+                              )
+                            }
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pagamento">Forma de pagamento</Label>
+                  <Input
+                    id="pagamento"
+                    maxLength={60}
+                    placeholder="no Pix"
+                    value={C.forma_pagamento}
+                    onChange={(e) =>
+                      setCampo("forma_pagamento", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="imagem">URL da imagem</Label>
+                <Input
+                  id="imagem"
+                  type="url"
+                  maxLength={1000}
+                  value={C.imagem_url}
+                  onChange={(e) => setCampo("imagem_url", e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="loja">Loja</Label>
+                  <Input
+                    id="loja"
+                    maxLength={80}
+                    value={C.loja}
+                    onChange={(e) => setCampo("loja", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="categoria">Categoria</Label>
                   <select
-                    value={form.categoria_id}
-                    onChange={(e) =>
-                      setForm({ ...form, categoria_id: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
+                    id="categoria"
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={C.categoria_id}
+                    onChange={(e) => setCampo("categoria_id", e.target.value)}
                   >
                     <option value="">Sem categoria</option>
-                    {categorias.map((c: any) => (
+                    {O.map((c: any) => (
                       <option key={c.id} value={c.id}>
                         {c.nome}
                       </option>
@@ -572,209 +893,53 @@ export function AdminProdutosPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  URL da Imagem Principal *
-                </label>
-                <input
-                  required
-                  value={form.imagem_principal}
-                  onChange={(e) =>
-                    setForm({ ...form, imagem_principal: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
+              <div className="space-y-1.5">
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea
+                  id="descricao"
+                  rows={4}
+                  maxLength={4000}
+                  value={C.descricao}
+                  onChange={(e) => setCampo("descricao", e.target.value)}
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Link de Afiliado *
-                </label>
-                <input
-                  required
-                  value={form.link_afiliado}
-                  onChange={(e) =>
-                    setForm({ ...form, link_afiliado: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Cupom (opcional)
-                  </label>
-                  <input
-                    value={form.cupom}
-                    onChange={(e) =>
-                      setForm({ ...form, cupom: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Avaliação (0 a 5)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="5"
-                    value={form.avaliacao}
-                    onChange={(e) =>
-                      setForm({ ...form, avaliacao: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Descrição Curta
-                </label>
-                <input
-                  value={form.descricao_curta}
-                  onChange={(e) =>
-                    setForm({ ...form, descricao_curta: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Descrição Completa
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.descricao_completa}
-                  onChange={(e) =>
-                    setForm({ ...form, descricao_completa: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.destaque}
-                    onChange={(e) =>
-                      setForm({ ...form, destaque: e.target.checked })
-                    }
-                  />
-                  Destaque na Home
-                </label>
-                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.publicado}
-                    onChange={(e) =>
-                      setForm({ ...form, publicado: e.target.checked })
-                    }
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={C.publicado}
+                    onCheckedChange={(v) => setCampo("publicado", v)}
                   />
                   Publicado
                 </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={C.destaque}
+                    onCheckedChange={(v) => setCampo("destaque", v)}
+                  />
+                  Destaque na home
+                </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <button
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                <Button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-muted text-sm font-semibold"
+                  variant="outline"
+                  onClick={() => setDialogAberto(false)}
                 >
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold"
-                >
-                  {saving ? "Salvando..." : "Salvar Produto"}
-                </button>
+                </Button>
+                <Button type="submit" disabled={salvarMut.isPending}>
+                  {salvarMut.isPending && (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  )}
+                  Salvar
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="p-4">Produto</th>
-                <th className="p-4">Categoria</th>
-                <th className="p-4">Preço</th>
-                <th className="p-4">Cliques</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {produtos.map((p: any) => (
-                <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="p-4 flex items-center gap-3">
-                    <img
-                      src={p.imagem_principal}
-                      alt={p.titulo}
-                      className="w-10 h-10 rounded-lg object-contain bg-white border border-border"
-                    />
-                    <div>
-                      <div className="font-semibold line-clamp-1 max-w-xs">
-                        {p.titulo}
-                      </div>
-                      {p.destaque && (
-                        <span className="text-[10px] font-bold text-primary uppercase">
-                          ★ Destaque
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
-                    {p.categorias?.nome || "—"}
-                  </td>
-                  <td className="p-4 font-bold text-accent">
-                    {formatCurrency(p.preco_atual)}
-                  </td>
-                  <td className="p-4 font-mono">{p.cliques_total || 0}</td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        p.publicado
-                          ? "bg-accent/15 text-accent"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {p.publicado ? "Publicado" : "Rascunho"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right space-x-1">
-                    <button
-                      onClick={() => handleEdit(p)}
-                      className="p-2 hover:bg-muted rounded-lg text-foreground"
-                      title="Editar"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="p-2 hover:bg-destructive/10 rounded-lg text-destructive"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
@@ -784,457 +949,413 @@ export function AdminCategoriasPage() {
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
 
-  const { data: categorias = [] } = useQuery({
-    queryKey: ["admin-categorias"],
+  const { data: v = [] } = useQuery({
+    queryKey: ["categorias"],
     queryFn: () => apiCall<any[]>("list_categorias"),
   });
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiCall("create_categoria", { nome, descricao });
-      toast.success("Categoria criada!");
+  const criarMut = useMutation({
+    mutationFn: () =>
+      apiCall("create_categoria", {
+        nome: nome.trim(),
+        descricao: descricao.trim() || null,
+        ordem: v.length,
+      }),
+    onSuccess: () => {
+      toast.success("Categoria criada.");
       setNome("");
       setDescricao("");
-      queryClient.invalidateQueries({ queryKey: ["admin-categorias"] });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => toast.error(err.message || "Falha ao salvar."),
+  });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Excluir esta categoria?")) return;
-    try {
-      await apiCall("delete_categoria", { id });
-      toast.success("Categoria excluída");
-      queryClient.invalidateQueries({ queryKey: ["admin-categorias"] });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+  const removerMut = useMutation({
+    mutationFn: (id: string) => apiCall("delete_categoria", { id }),
+    onSuccess: () => {
+      toast.success("Categoria removida.");
+      queryClient.invalidateQueries();
+    },
+    onError: () => toast.error("Falha ao remover."),
+  });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="bg-card border border-border rounded-2xl p-6 h-fit">
-        <h2 className="font-display font-bold text-lg mb-4">Nova Categoria</h2>
-        <form onSubmit={handleAdd} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1">Nome *</label>
-            <input
-              required
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              Descrição
-            </label>
-            <textarea
-              rows={3}
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-primary text-primary-foreground font-bold text-sm py-2.5 rounded-xl flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Adicionar Categoria
-          </button>
-        </form>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">Categorias</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cada categoria gera uma página própria, indexável no Google.
+        </p>
       </div>
 
-      <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="p-4">Nome</th>
-              <th className="p-4">Slug</th>
-              <th className="p-4">Descrição</th>
-              <th className="p-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {categorias.map((c: any) => (
-              <tr key={c.id}>
-                <td className="p-4 font-semibold">{c.nome}</td>
-                <td className="p-4 font-mono text-xs text-muted-foreground">
-                  {c.slug}
-                </td>
-                <td className="p-4 text-muted-foreground">{c.descricao}</td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <form
+        className="space-y-3 rounded-md border border-border bg-card p-4 shadow-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (nome.trim().length < 2) {
+            toast.error("Informe um nome com pelo menos 2 caracteres.");
+            return;
+          }
+          criarMut.mutate();
+        }}
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="nome-categoria">Nome</Label>
+          <Input
+            id="nome-categoria"
+            maxLength={60}
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="descricao-categoria">Descrição (usada no SEO)</Label>
+          <Input
+            id="descricao-categoria"
+            maxLength={500}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+          />
+        </div>
+        <Button type="submit" disabled={criarMut.isPending}>
+          {criarMut.isPending && (
+            <LoaderCircle className="size-4 animate-spin" />
+          )}
+          Adicionar categoria
+        </Button>
+      </form>
+
+      <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card shadow-sm">
+        {v.map((e: any) => (
+          <li key={e.id} className="flex items-center gap-3 p-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{e.nome}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                /categoria/{e.slug}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Excluir categoria"
+              onClick={() => {
+                if (window.confirm(`Remover "${e.nome}"?`)) {
+                  removerMut.mutate(e.id);
+                }
+              }}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-const emptyPost = {
-  id: "",
+const postInicial = {
+  id: undefined as string | undefined,
   titulo: "",
   resumo: "",
   conteudo: "",
-  imagem_capa: "",
-  publicado: true,
+  capa_url: "",
+  publicado: false,
 };
 
 export function AdminPostsPage() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<any>(emptyPost);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [C, setC] = useState(postInicial);
 
-  const { data: posts = [] } = useQuery({
-    queryKey: ["admin-posts"],
+  const { data: T = [] } = useQuery({
+    queryKey: ["admin", "posts"],
     queryFn: () => apiCall<any[]>("list_posts", { publicadoOnly: false }),
   });
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiCall("upsert_post", { post: form });
-      toast.success(form.id ? "Artigo atualizado!" : "Artigo publicado!");
-      queryClient.invalidateQueries({ queryKey: ["admin-posts"] });
-      setModalOpen(false);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+  const salvarMut = useMutation({
+    mutationFn: () =>
+      apiCall("upsert_post", {
+        post: {
+          id: C.id,
+          titulo: C.titulo.trim(),
+          resumo: C.resumo.trim() || null,
+          conteudo: C.conteudo.trim(),
+          capa_url: C.capa_url.trim() || null,
+          publicado: C.publicado,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Post salvo.");
+      setC(postInicial);
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) =>
+      toast.error(err.message || "Falha ao salvar o post."),
+  });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Excluir este artigo?")) return;
-    try {
-      await apiCall("delete_post", { id });
-      toast.success("Artigo excluído");
-      queryClient.invalidateQueries({ queryKey: ["admin-posts"] });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+  const removerMut = useMutation({
+    mutationFn: (id: string) => apiCall("delete_post", { id }),
+    onSuccess: () => {
+      toast.success("Post removido.");
+      queryClient.invalidateQueries();
+    },
+    onError: () => toast.error("Falha ao remover o post."),
+  });
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display font-extrabold text-2xl">Blog / Posts</h1>
-          <p className="text-sm text-muted-foreground">
-            Artigos, reviews e listas de compras
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setForm(emptyPost);
-            setModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-semibold text-sm px-4 py-2.5 rounded-xl"
-        >
-          <Plus className="w-4 h-4" /> Novo Artigo
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">Blog</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Guias de compra atraem tráfego orgânico do Google. Use `## Título` e
+          `- item` no conteúdo.
+        </p>
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-foreground/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-bold text-xl">
-                {form.id ? "Editar Artigo" : "Novo Artigo"}
-              </h2>
-              <button onClick={() => setModalOpen(false)}>
-                <X className="w-5 h-5" />
-              </button>
+      <form
+        className="space-y-3 rounded-md border border-border bg-card p-4 shadow-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (C.titulo.trim().length < 3 || C.conteudo.trim().length < 10) {
+            toast.error("Preencha título e conteúdo.");
+            return;
+          }
+          salvarMut.mutate();
+        }}
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="titulo-post">Título</Label>
+          <Input
+            id="titulo-post"
+            maxLength={200}
+            value={C.titulo}
+            onChange={(e) => setC({ ...C, titulo: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="resumo-post">Resumo (meta description)</Label>
+          <Input
+            id="resumo-post"
+            maxLength={400}
+            value={C.resumo}
+            onChange={(e) => setC({ ...C, resumo: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="capa-post">URL da capa</Label>
+          <Input
+            id="capa-post"
+            type="url"
+            maxLength={1000}
+            value={C.capa_url}
+            onChange={(e) => setC({ ...C, capa_url: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="conteudo-post">Conteúdo</Label>
+          <Textarea
+            id="conteudo-post"
+            rows={10}
+            maxLength={40000}
+            value={C.conteudo}
+            onChange={(e) => setC({ ...C, conteudo: e.target.value })}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch
+            checked={C.publicado}
+            onCheckedChange={(v) => setC({ ...C, publicado: v })}
+          />
+          Publicar agora
+        </label>
+        <div className="flex gap-2">
+          <Button type="submit" disabled={salvarMut.isPending}>
+            {salvarMut.isPending && (
+              <LoaderCircle className="size-4 animate-spin" />
+            )}
+            {C.id ? "Salvar alterações" : "Criar post"}
+          </Button>
+          {C.id && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setC(postInicial)}
+            >
+              Cancelar edição
+            </Button>
+          )}
+        </div>
+      </form>
+
+      <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card shadow-sm">
+        {T.map((e: any) => (
+          <li key={e.id} className="flex items-center gap-3 p-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{e.titulo}</p>
+              <p className="text-xs text-muted-foreground">
+                {e.publicado ? "Publicado" : "Rascunho"} · /blog/{e.slug}
+              </p>
             </div>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Título *
-                </label>
-                <input
-                  required
-                  value={form.titulo}
-                  onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  URL da Imagem de Capa
-                </label>
-                <input
-                  value={form.imagem_capa}
-                  onChange={(e) =>
-                    setForm({ ...form, imagem_capa: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Resumo
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.resumo}
-                  onChange={(e) => setForm({ ...form, resumo: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Conteúdo
-                </label>
-                <textarea
-                  rows={8}
-                  value={form.conteudo}
-                  onChange={(e) =>
-                    setForm({ ...form, conteudo: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={form.publicado}
-                  onChange={(e) =>
-                    setForm({ ...form, publicado: e.target.checked })
-                  }
-                />
-                Publicado
-              </label>
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-muted text-sm font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold"
-                >
-                  Salvar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="p-4">Título</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {posts.map((p: any) => (
-              <tr key={p.id}>
-                <td className="p-4 font-semibold">{p.titulo}</td>
-                <td className="p-4">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                      p.publicado
-                        ? "bg-accent/15 text-accent"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {p.publicado ? "Publicado" : "Rascunho"}
-                  </span>
-                </td>
-                <td className="p-4 text-right space-x-1">
-                  <button
-                    onClick={() => {
-                      setForm({
-                        id: p.id,
-                        titulo: p.titulo,
-                        resumo: p.resumo || "",
-                        conteudo: p.conteudo || "",
-                        imagem_capa: p.imagem_capa || "",
-                        publicado: p.publicado,
-                      });
-                      setModalOpen(true);
-                    }}
-                    className="p-2 hover:bg-muted rounded-lg"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Editar post"
+              onClick={() =>
+                setC({
+                  id: e.id,
+                  titulo: e.titulo,
+                  resumo: e.resumo ?? "",
+                  conteudo: e.conteudo,
+                  capa_url: e.capa_url ?? "",
+                  publicado: e.publicado,
+                })
+              }
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Excluir post"
+              onClick={() => {
+                if (window.confirm(`Remover "${e.titulo}"?`)) {
+                  removerMut.mutate(e.id);
+                }
+              }}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 export function AdminConfiguracoesPage() {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<any>(null);
-
-  const { data } = useQuery({
-    queryKey: ["admin-config"],
+  const { data: n } = useQuery({
+    queryKey: ["configuracoes"],
     queryFn: () => apiCall<any>("get_configuracoes"),
   });
 
+  const [form, setForm] = useState<any>({
+    nome_site: "",
+    descricao_site: "",
+    whatsapp: "",
+    instagram: "",
+    facebook: "",
+    tiktok: "",
+    aviso_afiliado: "",
+  });
+
   useEffect(() => {
-    if (data) setForm(data);
-  }, [data]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiCall("update_configuracoes", { configuracoes: form });
-      toast.success("Configurações salvas!");
-      queryClient.invalidateQueries({ queryKey: ["configuracoes"] });
-    } catch (err: any) {
-      toast.error(err.message);
+    if (n) {
+      setForm({
+        nome_site: n.nome_site ?? "",
+        descricao_site: n.descricao_site ?? "",
+        whatsapp: n.whatsapp ?? "",
+        instagram: n.instagram ?? "",
+        facebook: n.facebook ?? "",
+        tiktok: n.tiktok ?? "",
+        aviso_afiliado: n.aviso_afiliado ?? "",
+      });
     }
-  };
+  }, [n]);
 
-  if (!form) {
-    return (
-      <div className="text-muted-foreground">Carregando configurações...</div>
-    );
-  }
+  const salvarMut = useMutation({
+    mutationFn: () =>
+      apiCall("update_configuracoes", {
+        configuracoes: {
+          nome_site: form.nome_site.trim(),
+          descricao_site: form.descricao_site.trim(),
+          whatsapp: form.whatsapp.trim() || null,
+          instagram: form.instagram.trim() || null,
+          facebook: form.facebook.trim() || null,
+          tiktok: form.tiktok.trim() || null,
+          aviso_afiliado: form.aviso_afiliado.trim(),
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Configurações atualizadas.");
+      queryClient.invalidateQueries();
+    },
+    onError: (err: any) => toast.error(err.message || "Falha ao salvar."),
+  });
+
+  const campos = [
+    { chave: "nome_site", rotulo: "Nome do site", max: 80 },
+    {
+      chave: "whatsapp",
+      rotulo: "WhatsApp (só números, com DDI)",
+      max: 30,
+    },
+    { chave: "instagram", rotulo: "Instagram (usuário)", max: 60 },
+    { chave: "facebook", rotulo: "Facebook (página)", max: 120 },
+    { chave: "tiktok", rotulo: "TikTok (usuário)", max: 60 },
+  ];
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="font-display font-extrabold text-2xl mb-1">
-        Configurações do Site
-      </h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        Textos institucionais, rodapé e redes sociais
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          Configurações
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Identidade do site e canais usados nos botões de compartilhamento.
+        </p>
+      </div>
 
       <form
-        onSubmit={handleSave}
-        className="bg-card border border-border rounded-2xl p-6 space-y-4"
+        className="space-y-4 rounded-md border border-border bg-card p-4 shadow-sm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          salvarMut.mutate();
+        }}
       >
-        <div>
-          <label className="block text-xs font-semibold mb-1">
-            Nome do Site
-          </label>
-          <input
-            value={form.nome_site || ""}
-            onChange={(e) => setForm({ ...form, nome_site: e.target.value })}
-            className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1">
-            Descrição do Site
-          </label>
-          <textarea
+        {campos.map(({ chave, rotulo, max }) => (
+          <div key={chave} className="space-y-1.5">
+            <Label htmlFor={chave}>{rotulo}</Label>
+            <Input
+              id={chave}
+              maxLength={max}
+              value={form[chave] || ""}
+              onChange={(e) => setForm({ ...form, [chave]: e.target.value })}
+            />
+          </div>
+        ))}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="descricao_site">Descrição do site (SEO)</Label>
+          <Textarea
+            id="descricao_site"
             rows={2}
+            maxLength={300}
             value={form.descricao_site || ""}
             onChange={(e) =>
               setForm({ ...form, descricao_site: e.target.value })
             }
-            className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
           />
         </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1">
-            Aviso de Afiliado (Rodapé)
-          </label>
-          <textarea
+
+        <div className="space-y-1.5">
+          <Label htmlFor="aviso_afiliado">Aviso de afiliados (rodapé)</Label>
+          <Textarea
+            id="aviso_afiliado"
             rows={3}
+            maxLength={600}
             value={form.aviso_afiliado || ""}
             onChange={(e) =>
               setForm({ ...form, aviso_afiliado: e.target.value })
             }
-            className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
           />
         </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1">
-            Texto de Copyright (Rodapé)
-          </label>
-          <input
-            value={form.texto_rodape || ""}
-            onChange={(e) => setForm({ ...form, texto_rodape: e.target.value })}
-            className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-          />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              E-mail de Contato
-            </label>
-            <input
-              value={form.email_contato || ""}
-              onChange={(e) =>
-                setForm({ ...form, email_contato: e.target.value })
-              }
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              Link Grupo WhatsApp
-            </label>
-            <input
-              value={form.link_whatsapp || ""}
-              onChange={(e) =>
-                setForm({ ...form, link_whatsapp: e.target.value })
-              }
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              Link Canal Telegram
-            </label>
-            <input
-              value={form.link_telegram || ""}
-              onChange={(e) =>
-                setForm({ ...form, link_telegram: e.target.value })
-              }
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1">
-              Link Instagram
-            </label>
-            <input
-              value={form.link_instagram || ""}
-              onChange={(e) =>
-                setForm({ ...form, link_instagram: e.target.value })
-              }
-              className="w-full px-3.5 py-2 rounded-xl bg-muted border border-border text-sm"
-            />
-          </div>
-        </div>
-        <button
-          type="submit"
-          className="bg-primary text-primary-foreground font-bold text-sm px-6 py-2.5 rounded-xl"
-        >
-          Salvar Alterações
-        </button>
+
+        <Button type="submit" disabled={salvarMut.isPending}>
+          {salvarMut.isPending && (
+            <LoaderCircle className="size-4 animate-spin" />
+          )}
+          Salvar configurações
+        </Button>
       </form>
     </div>
   );

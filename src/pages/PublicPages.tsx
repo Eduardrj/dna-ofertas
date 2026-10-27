@@ -1,27 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Flame,
   ArrowRight,
-  ShieldCheck,
-  TrendingDown,
-  Zap,
   Sparkles,
+  Tag,
   ExternalLink,
-  Copy,
-  Check,
-  ArrowLeft,
-  Star,
-  Calendar,
-  Award,
-  Heart,
-  Mail,
+  Store,
+  Truck,
+  ShieldCheck,
   MessageCircle,
-  Send,
+  Instagram,
 } from "lucide-react";
-import { toast } from "sonner";
-import { apiCall, formatCurrency, formatDate } from "@/lib/api";
+import {
+  apiCall,
+  formatMoeda,
+  calcularDesconto,
+  formatData,
+  truncar,
+} from "@/lib/api";
+import { Button, Badge, Separator, cn } from "@/components/ui";
 import { SiteLayout, GradeProdutos, ShareButtons } from "@/components/SiteLayout";
 
 export function HomePage() {
@@ -31,7 +30,7 @@ export function HomePage() {
       apiCall<any[]>("list_produtos", {
         publicadoOnly: true,
         destaqueOnly: true,
-        limit: 4,
+        limit: 8,
       }),
   });
 
@@ -40,12 +39,12 @@ export function HomePage() {
     queryFn: () =>
       apiCall<any[]>("list_produtos", {
         publicadoOnly: true,
-        limit: 8,
+        limit: 12,
       }),
   });
 
   const { data: categorias = [] } = useQuery({
-    queryKey: ["home-categorias"],
+    queryKey: ["categorias"],
     queryFn: () => apiCall<any[]>("list_categorias"),
   });
 
@@ -54,278 +53,230 @@ export function HomePage() {
     queryFn: () =>
       apiCall<any[]>("list_posts", {
         publicadoOnly: true,
-        limit: 2,
       }),
   });
 
   useEffect(() => {
-    document.title = "DNA Ofertas — As Melhores Ofertas Selecionadas Para Você";
+    document.title = "DNA Ofertas — as melhores promoções do dia";
   }, []);
 
   return (
     <SiteLayout>
-      <section className="relative overflow-hidden bg-gradient-to-br from-foreground via-foreground to-foreground/95 text-background">
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 20%, hsl(16 95% 52%) 0%, transparent 50%), radial-gradient(circle at 80% 80%, hsl(152 69% 38%) 0%, transparent 50%)",
-          }}
-        />
-        <div className="container mx-auto px-4 py-14 md:py-20 relative">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-1.5 bg-primary/20 border border-primary/40 text-primary px-3.5 py-1 rounded-full text-xs font-semibold mb-5">
-              <Flame className="w-3.5 h-3.5" /> OFERTAS VERIFICADAS HOJE
+      <section className="border-b border-border bg-primary">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[1.2fr_1fr] md:items-center md:py-14">
+          <div className="text-primary-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-3 py-1 text-xs font-bold uppercase tracking-wide">
+              <Flame className="size-3.5" /> Ofertas do dia
             </span>
-            <h1 className="font-display font-extrabold text-3xl sm:text-5xl md:text-6xl leading-[1.08] tracking-tight mb-5">
-              Economize de verdade nas <span className="text-primary">melhores ofertas</span> da internet.
+            <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl">
+              Garimpamos as promoções. Você só aproveita.
             </h1>
-            <p className="text-base sm:text-lg text-background/75 mb-8 max-w-2xl">
-              Curadoria diária de promoções das principais lojas do Brasil com descontos reais verificados pela nossa equipe.
+            <p className="mt-3 max-w-xl text-sm leading-relaxed opacity-90 sm:text-base">
+              Comparamos preços todos os dias e listamos apenas o que tem
+              desconto de verdade. Clique, confira na loja e compre com
+              segurança.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/produtos"
-                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-primary/30"
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button
+                asChild
+                size="lg"
+                className="bg-brand text-brand-foreground hover:bg-brand/90"
               >
-                Ver Ofertas de Hoje <ArrowRight className="w-4 h-4" />
-              </Link>
+                <Link to="/produtos">
+                  Ver todas as ofertas
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {destaques.slice(0, 4).map((e: any) => (
               <Link
-                to="/blog"
-                className="inline-flex items-center gap-2 bg-background/10 hover:bg-background/20 text-background font-semibold px-6 py-3.5 rounded-xl border border-background/20 transition-all"
+                key={e.id}
+                to={`/produto/${e.slug}`}
+                className="overflow-hidden rounded-md bg-card shadow-sm"
               >
-                Guias de Compra
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-background/15">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-display font-bold text-sm">Lojas Confiáveis</div>
-                <div className="text-xs text-background/60">Apenas varejistas oficiais</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent/20 text-accent flex items-center justify-center shrink-0">
-                <TrendingDown className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-display font-bold text-sm">Descontos Reais</div>
-                <div className="text-xs text-background/60">Histórico de preço conferido</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="font-display font-bold text-sm">Atualização Diária</div>
-                <div className="text-xs text-background/60">Novas ofertas toda hora</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> Em Alta
-            </span>
-            <h2 className="font-display font-extrabold text-2xl sm:text-3xl mt-1">
-              Ofertas em Destaque
-            </h2>
-          </div>
-          <Link
-            to="/produtos"
-            className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-          >
-            Ver todas <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <GradeProdutos produtos={destaques} />
-      </section>
-
-      <section className="container mx-auto px-4 py-8">
-        <h2 className="font-display font-extrabold text-2xl sm:text-3xl mb-6">
-          Explorar por Categoria
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {categorias.map((c: any) => (
-            <Link
-              key={c.id}
-              to={`/categoria/${c.slug}`}
-              className="group bg-card hover:bg-primary hover:text-primary-foreground border border-border rounded-2xl p-5 transition-all hover:shadow-lg hover:-translate-y-0.5"
-            >
-              <div className="font-display font-bold text-base mb-1">{c.nome}</div>
-              <div className="text-xs text-muted-foreground group-hover:text-primary-foreground/80 line-clamp-2">
-                {c.descricao}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-12">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-accent">
-              Acabaram de chegar
-            </span>
-            <h2 className="font-display font-extrabold text-2xl sm:text-3xl mt-1">
-              Últimas Ofertas Publicadas
-            </h2>
-          </div>
-          <Link
-            to="/produtos"
-            className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-          >
-            Ver todas <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <GradeProdutos produtos={recentes} />
-      </section>
-
-      {posts.length > 0 && (
-        <section className="container mx-auto px-4 py-12">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                Conteúdo
-              </span>
-              <h2 className="font-display font-extrabold text-2xl sm:text-3xl mt-1">
-                Guias &amp; Dicas de Compra
-              </h2>
-            </div>
-            <Link
-              to="/blog"
-              className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              Ver blog <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {posts.map((p: any) => (
-              <Link
-                key={p.id}
-                to={`/blog/${p.slug}`}
-                className="group bg-card rounded-2xl border border-border overflow-hidden flex flex-col sm:flex-row hover:shadow-xl transition-all"
-              >
-                {p.imagem_capa && (
-                  <img
-                    src={p.imagem_capa}
-                    alt={p.titulo}
-                    className="sm:w-48 h-48 sm:h-auto object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                )}
-                <div className="p-6 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-display font-bold text-lg mb-2 group-hover:text-primary transition-colors">
-                      {p.titulo}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {p.resumo}
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-primary mt-4 inline-flex items-center gap-1">
-                    Ler artigo <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
+                <div className="aspect-square bg-muted">
+                  {e.imagem_url && (
+                    <img
+                      src={e.imagem_url}
+                      alt={e.titulo}
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
+                  )}
                 </div>
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl space-y-12 px-4 py-10">
+        <section aria-labelledby="titulo-categorias">
+          <h2
+            id="titulo-categorias"
+            className="text-xl font-extrabold tracking-tight"
+          >
+            Navegue por categoria
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {categorias.map((e: any) => (
+              <Link
+                key={e.id}
+                to={`/categoria/${e.slug}`}
+                className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm font-semibold shadow-sm transition-colors hover:border-primary hover:text-primary"
+              >
+                <Tag className="size-4 shrink-0 text-primary" />
+                {e.nome}
+              </Link>
+            ))}
+          </div>
         </section>
-      )}
+
+        <section aria-labelledby="titulo-destaques">
+          <div className="flex items-end justify-between gap-4">
+            <h2
+              id="titulo-destaques"
+              className="text-xl font-extrabold tracking-tight"
+            >
+              <Sparkles className="mr-1 inline size-5 text-primary" />
+              Selecionados da semana
+            </h2>
+            <Link
+              to="/produtos"
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Ver tudo
+            </Link>
+          </div>
+          <div className="mt-4">
+            <GradeProdutos produtos={destaques} />
+          </div>
+        </section>
+
+        <section aria-labelledby="titulo-recentes">
+          <h2
+            id="titulo-recentes"
+            className="text-xl font-extrabold tracking-tight"
+          >
+            Adicionados recentemente
+          </h2>
+          <div className="mt-4">
+            <GradeProdutos produtos={recentes} />
+          </div>
+        </section>
+
+        {posts.length > 0 && (
+          <section aria-labelledby="titulo-blog">
+            <div className="flex items-end justify-between gap-4">
+              <h2
+                id="titulo-blog"
+                className="text-xl font-extrabold tracking-tight"
+              >
+                Guias de compra
+              </h2>
+              <Link
+                to="/blog"
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Ver o blog
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {posts.slice(0, 2).map((e: any) => (
+                <Link
+                  key={e.id}
+                  to={`/blog/${e.slug}`}
+                  className="group overflow-hidden rounded-md border border-border bg-card shadow-sm"
+                >
+                  {e.capa_url && (
+                    <img
+                      src={e.capa_url}
+                      alt={e.titulo}
+                      loading="lazy"
+                      className="h-44 w-full object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted-foreground">
+                      {formatData(e.publicado_em)}
+                    </p>
+                    <h3 className="mt-1 font-bold leading-snug group-hover:text-primary">
+                      {e.titulo}
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {truncar(e.resumo ?? e.conteudo, 140)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </SiteLayout>
   );
 }
 
+const opcoesOrdenacao = [
+  { valor: "recentes", rotulo: "Mais recentes" },
+  { valor: "desconto", rotulo: "Maior desconto" },
+  { valor: "menor-preco", rotulo: "Menor preço" },
+  { valor: "maior-preco", rotulo: "Maior preço" },
+];
+
 export function ProdutosPage() {
-  const [categoriaId, setCategoriaId] = useState<string>("todas");
-  const [ordenar, setOrdenar] = useState<string>("recentes");
+  const [searchParams] = useSearchParams();
+  const ordem = searchParams.get("ordem") || "recentes";
 
-  const { data: categorias = [] } = useQuery({
-    queryKey: ["categorias-filtro"],
-    queryFn: () => apiCall<any[]>("list_categorias"),
-  });
-
-  const { data: produtos = [], isLoading } = useQuery({
-    queryKey: ["produtos-lista", categoriaId, ordenar],
+  const { data: produtos = [] } = useQuery({
+    queryKey: ["produtos-lista", ordem],
     queryFn: () =>
       apiCall<any[]>("list_produtos", {
         publicadoOnly: true,
-        categoriaId: categoriaId !== "todas" ? categoriaId : null,
-        ordenar,
+        ordenar: ordem,
+        limit: 48,
       }),
   });
 
   useEffect(() => {
-    document.title = "Todas as Ofertas — DNA Ofertas";
+    document.title = "Todas as ofertas — DNA Ofertas";
   }, []);
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-10">
-        <div className="mb-8">
-          <h1 className="font-display font-extrabold text-3xl sm:text-4xl mb-2">
-            Todas as Ofertas
-          </h1>
-          <p className="text-muted-foreground">
-            Explore nossa seleção completa de promoções verificadas.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          Todas as ofertas
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {produtos.length}{" "}
+          {produtos.length === 1
+            ? "produto disponível"
+            : "produtos disponíveis"}
+        </p>
 
-        <div className="bg-card border border-border rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setCategoriaId("todas")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                categoriaId === "todas"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted hover:bg-muted/80 text-foreground"
-              }`}
+        <nav aria-label="Ordenação" className="mt-5 flex flex-wrap gap-2">
+          {opcoesOrdenacao.map((n) => (
+            <Link
+              key={n.valor}
+              to={`/produtos?ordem=${n.valor}`}
+              className={
+                n.valor === ordem
+                  ? "rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground"
+                  : "rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-primary"
+              }
             >
-              Todas
-            </button>
-            {categorias.map((c: any) => (
-              <button
-                key={c.id}
-                onClick={() => setCategoriaId(c.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  categoriaId === c.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-muted/80 text-foreground"
-                }`}
-              >
-                {c.nome}
-              </button>
-            ))}
-          </div>
+              {n.rotulo}
+            </Link>
+          ))}
+        </nav>
 
-          <select
-            value={ordenar}
-            onChange={(e) => setOrdenar(e.target.value)}
-            className="px-3.5 py-2 rounded-xl bg-muted border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="recentes">Mais recentes</option>
-            <option value="desconto">Maior desconto</option>
-            <option value="menor-preco">Menor preço</option>
-            <option value="maior-preco">Maior preço</option>
-          </select>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Carregando ofertas...
-          </div>
-        ) : (
+        <div className="mt-6">
           <GradeProdutos produtos={produtos} />
-        )}
+        </div>
       </div>
     </SiteLayout>
   );
@@ -333,211 +284,175 @@ export function ProdutosPage() {
 
 export function ProdutoDetalhePage() {
   const { slug } = useParams();
-  const [copied, setCopied] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data: t, isLoading } = useQuery({
     queryKey: ["produto-slug", slug],
     queryFn: () => apiCall<any>("produto_by_slug", { slug }),
   });
 
-  const produto = data?.produto;
-  const relacionados = data?.relacionados || [];
+  const { data: destaques = [] } = useQuery({
+    queryKey: ["produto-destaques-rel"],
+    queryFn: () =>
+      apiCall<any[]>("list_produtos", {
+        publicadoOnly: true,
+        destaqueOnly: true,
+        limit: 4,
+      }),
+  });
 
   useEffect(() => {
-    if (produto) {
-      document.title = `${produto.titulo} — DNA Ofertas`;
+    if (t) {
+      document.title = `${truncar(t.titulo, 55)} — DNA Ofertas`;
     }
-  }, [produto]);
-
-  const handleCopyCupom = () => {
-    if (!produto?.cupom) return;
-    navigator.clipboard.writeText(produto.cupom);
-    setCopied(true);
-    toast.success("Cupom copiado!");
-    setTimeout(() => setCopied(false), 2000);
-  };
+  }, [t]);
 
   if (isLoading) {
     return (
       <SiteLayout>
-        <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
-          Carregando oferta...
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center text-sm text-muted-foreground">
+          Carregando oferta…
         </div>
       </SiteLayout>
     );
   }
 
-  if (!produto) {
+  if (!t) {
     return (
       <SiteLayout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="font-display font-bold text-2xl mb-4">
-            Oferta não encontrada
-          </h1>
-          <Link to="/produtos" className="text-primary font-semibold hover:underline">
-            Voltar para ofertas
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center">
+          <h1 className="text-2xl font-extrabold">Produto não encontrado</h1>
+          <Link
+            to="/produtos"
+            className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
+          >
+            Ver todas as ofertas
           </Link>
         </div>
       </SiteLayout>
     );
   }
 
+  const d = calcularDesconto(t.preco, t.preco_original);
+  const f =
+    typeof window !== "undefined"
+      ? window.location.href
+      : `/produto/${t.slug}`;
+
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-8">
-        <Link
-          to="/produtos"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar para ofertas
-        </Link>
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <nav aria-label="Trilha" className="text-xs text-muted-foreground">
+          <Link to="/" className="hover:text-primary">
+            Início
+          </Link>
+          <span className="mx-1.5">/</span>
+          {t.categorias ? (
+            <>
+              <Link
+                to={`/categoria/${t.categorias.slug}`}
+                className="hover:text-primary"
+              >
+                {t.categorias.nome}
+              </Link>
+              <span className="mx-1.5">/</span>
+            </>
+          ) : null}
+          <span className="text-foreground">{truncar(t.titulo, 50)}</span>
+        </nav>
 
-        <div className="bg-card rounded-3xl border border-border p-6 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div className="bg-white rounded-2xl p-8 flex items-center justify-center relative border border-border/60 aspect-square max-h-[480px]">
-            <img
-              src={produto.imagem_principal}
-              alt={produto.titulo}
-              className="max-h-full max-w-full object-contain"
-            />
-            {produto.desconto_percentual && produto.desconto_percentual > 0 ? (
-              <span className="absolute top-4 left-4 bg-primary text-primary-foreground text-sm font-bold px-3.5 py-1.5 rounded-full shadow-lg">
-                -{produto.desconto_percentual}% OFF
-              </span>
-            ) : null}
+        <div className="mt-4 grid gap-6 rounded-md border border-border bg-card p-4 shadow-sm md:grid-cols-2 md:p-6">
+          <div className="overflow-hidden rounded-md bg-muted">
+            {t.imagem_url ? (
+              <img
+                src={t.imagem_url}
+                alt={t.titulo}
+                className="aspect-square w-full object-cover"
+              />
+            ) : (
+              <div className="grid aspect-square place-items-center text-sm text-muted-foreground">
+                Sem imagem
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col">
-            {produto.categorias ? (
-              <Link
-                to={`/categoria/${produto.categorias.slug}`}
-                className="text-xs font-bold uppercase tracking-wider text-primary mb-2 w-fit hover:underline"
-              >
-                {produto.categorias.nome}
-              </Link>
-            ) : null}
-
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-4xl leading-tight mb-3">
-              {produto.titulo}
+            {t.categorias && (
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t.categorias.nome}
+              </span>
+            )}
+            <h1 className="mt-1 text-2xl font-bold leading-snug tracking-tight">
+              {t.titulo}
             </h1>
 
-            {produto.avaliacao ? (
-              <div className="flex items-center gap-1.5 mb-4">
-                <div className="flex text-amber-500">
-                  {Array.from({ length: 5 }).map((_, idx) => (
-                    <Star
-                      key={idx}
-                      className={`w-4 h-4 ${
-                        idx < Math.round(Number(produto.avaliacao))
-                          ? "fill-current"
-                          : ""
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {produto.avaliacao} / 5.0
+            <div className="mt-5 flex flex-wrap items-end gap-3">
+              {t.preco_original && d !== null && (
+                <span className="text-sm text-muted-foreground line-through">
+                  {formatMoeda(t.preco_original)}
                 </span>
-              </div>
-            ) : null}
-
-            {produto.descricao_curta ? (
-              <p className="text-muted-foreground mb-6">{produto.descricao_curta}</p>
-            ) : null}
-
-            <div className="bg-muted/60 rounded-2xl p-5 mb-6 border border-border">
-              {produto.preco_antigo && produto.preco_antigo > produto.preco_atual ? (
-                <div className="text-sm text-muted-foreground line-through">
-                  De {formatCurrency(produto.preco_antigo)}
-                </div>
-              ) : null}
-              <div className="flex items-baseline gap-2 my-1">
-                <span className="text-sm text-muted-foreground">Por apenas</span>
-                <span className="font-display font-extrabold text-3xl sm:text-4xl text-accent">
-                  {formatCurrency(produto.preco_atual)}
-                </span>
-              </div>
-              {produto.preco_antigo && produto.preco_antigo > produto.preco_atual ? (
-                <div className="text-xs font-semibold text-accent">
-                  Economia de{" "}
-                  {formatCurrency(
-                    Number(produto.preco_antigo) - Number(produto.preco_atual)
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {produto.cupom ? (
-              <div className="mb-6">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Cupom de desconto disponível:
-                </div>
-                <button
-                  onClick={handleCopyCupom}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 font-mono font-bold text-primary flex items-center justify-between gap-4 transition-colors"
-                >
-                  <span>{produto.cupom}</span>
-                  <span className="text-xs font-sans font-semibold flex items-center gap-1 bg-primary text-primary-foreground px-2.5 py-1 rounded-md">
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" /> Copiado
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" /> Copiar
-                      </>
-                    )}
-                  </span>
-                </button>
-              </div>
-            ) : null}
-
-            <a
-              href={`/ir/${produto.id}`}
-              target="_blank"
-              rel="nofollow sponsored noopener"
-              className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-display font-bold text-lg py-4 px-8 rounded-2xl transition-all shadow-lg shadow-primary/25 hover:shadow-xl"
-            >
-              Ir para a Loja e Aproveitar <ExternalLink className="w-5 h-5" />
-            </a>
-
-            <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-accent" /> Redirecionamento seguro para a loja oficial
+              )}
+              <span className="text-4xl font-semibold leading-none text-price">
+                {formatMoeda(t.preco)}
               </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" /> Publicado em{" "}
-                {formatDate(produto.data_publicacao)}
-              </span>
+              {d !== null && (
+                <Badge className="bg-success text-success-foreground">
+                  {d}% OFF
+                </Badge>
+              )}
             </div>
 
-            <div className="mt-5 pt-5 border-t border-border">
-              <ShareButtons
-                title={`🔥 ${produto.titulo} por ${formatCurrency(produto.preco_atual)}`}
-                path={`/produto/${produto.slug}`}
-              />
-            </div>
+            <Button asChild size="lg" className="mt-6 h-12 text-base">
+              <a
+                href={`/ir/${t.id}`}
+                rel="nofollow sponsored noopener"
+                target="_blank"
+              >
+                Ver oferta na loja
+                <ExternalLink className="size-4" />
+              </a>
+            </Button>
 
-            {produto.descricao_completa ? (
-              <div className="mt-8 pt-6 border-t border-border">
-                <h2 className="font-display font-bold text-lg mb-3">
-                  Sobre o produto
-                </h2>
-                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                  {produto.descricao_completa}
-                </p>
-              </div>
-            ) : null}
+            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+              {t.loja && (
+                <li className="flex items-center gap-2">
+                  <Store className="size-4 text-primary" />
+                  Vendido e entregue por {t.loja}
+                </li>
+              )}
+              <li className="flex items-center gap-2">
+                <Truck className="size-4 text-primary" />
+                Prazo e frete conforme a loja parceira
+              </li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-primary" />
+                Compra feita direto no site oficial da loja
+              </li>
+            </ul>
+
+            <Separator className="my-5" />
+            <ShareButtons titulo={t.titulo} url={f} preco={t.preco} />
           </div>
         </div>
 
-        {relacionados.length > 0 && (
-          <section className="mt-14">
-            <h2 className="font-display font-extrabold text-2xl mb-6">
-              Ofertas Relacionadas
-            </h2>
-            <GradeProdutos produtos={relacionados} />
+        {t.descricao && (
+          <section className="mt-6 rounded-md border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-lg font-bold">Sobre este produto</h2>
+            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+              {t.descricao}
+            </p>
           </section>
         )}
+
+        <section className="mt-10">
+          <h2 className="text-xl font-extrabold tracking-tight">
+            Você também pode gostar
+          </h2>
+          <div className="mt-4">
+            <GradeProdutos
+              produtos={destaques.filter((e: any) => e.id !== t.id)}
+            />
+          </div>
+        </section>
       </div>
     </SiteLayout>
   );
@@ -546,47 +461,54 @@ export function ProdutoDetalhePage() {
 export function CategoriaDetalhePage() {
   const { slug } = useParams();
 
-  const { data, isLoading } = useQuery({
+  const { data: c, isLoading } = useQuery({
     queryKey: ["categoria-detalhe", slug],
     queryFn: () => apiCall<any>("categoria_by_slug", { slug }),
   });
 
   useEffect(() => {
-    if (data?.categoria) {
-      document.title = `${data.categoria.nome} — Ofertas | DNA Ofertas`;
+    if (c?.categoria) {
+      document.title = `${c.categoria.nome} — DNA Ofertas`;
     }
-  }, [data]);
+  }, [c]);
+
+  if (isLoading) {
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center text-sm text-muted-foreground">
+          Carregando…
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  if (!c?.categoria) {
+    return (
+      <SiteLayout>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center">
+          <h1 className="text-2xl font-extrabold">Categoria não encontrada</h1>
+        </div>
+      </SiteLayout>
+    );
+  }
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-10">
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Carregando...
-          </div>
-        ) : !data?.categoria ? (
-          <div className="text-center py-16">Categoria não encontrada.</div>
-        ) : (
-          <>
-            <div className="mb-8">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                Categoria
-              </span>
-              <h1 className="font-display font-extrabold text-3xl sm:text-4xl mt-1 mb-2">
-                {data.categoria.nome}
-              </h1>
-              {data.categoria.descricao ? (
-                <p className="text-muted-foreground">
-                  {data.categoria.descricao}
-                </p>
-              ) : null}
-            </div>
-            <GradeProdutos
-              produtos={data.produtos}
-              vazio="Nenhuma oferta publicada nesta categoria ainda."
-            />
-          </>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          {c.categoria.nome}
+        </h1>
+        {c.categoria.descricao && (
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {c.categoria.descricao}
+          </p>
         )}
+        <div className="mt-6">
+          <GradeProdutos
+            produtos={c.produtos}
+            mensagemVazia="Ainda não há ofertas nesta categoria. Volte em breve!"
+          />
+        </div>
       </div>
     </SiteLayout>
   );
@@ -596,108 +518,93 @@ export function BuscaPage() {
   const [searchParams] = useSearchParams();
   const q = searchParams.get("q") || "";
 
-  const { data: produtos = [], isLoading } = useQuery({
+  const { data: s = [] } = useQuery({
     queryKey: ["busca", q],
     queryFn: () =>
       q.trim()
         ? apiCall<any[]>("list_produtos", {
             publicadoOnly: true,
             busca: q.trim(),
+            limit: 48,
           })
         : Promise.resolve([]),
   });
 
   useEffect(() => {
-    document.title = q ? `Busca por "${q}" — DNA Ofertas` : "Busca — DNA Ofertas";
+    document.title = q ? `Resultados para “${q}” — DNA Ofertas` : "Busca — DNA Ofertas";
   }, [q]);
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-10">
-        <h1 className="font-display font-extrabold text-2xl sm:text-3xl mb-2">
-          Resultados para: <span className="text-primary">"{q}"</span>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          Resultados para “{q}”
         </h1>
-        <p className="text-sm text-muted-foreground mb-8">
-          {produtos.length} oferta(s) encontrada(s)
+        <p className="mt-1 text-sm text-muted-foreground">
+          {s.length}{" "}
+          {s.length === 1 ? "produto encontrado" : "produtos encontrados"}
         </p>
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Buscando...
-          </div>
-        ) : (
+        <div className="mt-6">
           <GradeProdutos
-            produtos={produtos}
-            vazio={`Nenhuma oferta encontrada para "${q}".`}
+            produtos={s}
+            mensagemVazia="Nada encontrado com esse termo. Tente uma palavra mais curta ou navegue pelas categorias."
           />
-        )}
+        </div>
       </div>
     </SiteLayout>
   );
 }
 
 export function BlogIndexPage() {
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: e = [] } = useQuery({
     queryKey: ["blog-lista"],
     queryFn: () => apiCall<any[]>("list_posts", { publicadoOnly: true }),
   });
 
   useEffect(() => {
-    document.title = "Blog & Guias de Compra — DNA Ofertas";
+    document.title = "Guias de compra — DNA Ofertas";
   }, []);
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-10">
-        <div className="max-w-2xl mb-10">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary">
-            Blog DNA Ofertas
-          </span>
-          <h1 className="font-display font-extrabold text-3xl sm:text-4xl mt-1 mb-2">
-            Guias de Compra, Reviews e Dicas para Economizar
-          </h1>
-          <p className="text-muted-foreground">
-            Análises imparciais e comparativos para você escolher sempre o melhor custo-benefício.
-          </p>
-        </div>
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <h1 className="text-2xl font-extrabold tracking-tight">
+          Guias de compra
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Comparativos, análises e dicas para gastar melhor.
+        </p>
 
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Carregando artigos...
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="text-center py-16 bg-card rounded-2xl border border-border text-muted-foreground">
-            Nenhum artigo publicado ainda.
-          </div>
+        {e.length === 0 ? (
+          <p className="mt-8 rounded-md border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Nenhum post publicado ainda.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {posts.map((p: any) => (
+          <div className="mt-6 space-y-4">
+            {e.map((post: any) => (
               <Link
-                key={p.id}
-                to={`/blog/${p.slug}`}
-                className="group bg-card rounded-2xl border border-border overflow-hidden flex flex-col hover:shadow-xl transition-all"
+                key={post.id}
+                to={`/blog/${post.slug}`}
+                className="group flex flex-col gap-4 overflow-hidden rounded-md border border-border bg-card shadow-sm sm:flex-row"
               >
-                {p.imagem_capa && (
-                  <div className="aspect-video overflow-hidden bg-muted">
-                    <img
-                      src={p.imagem_capa}
-                      alt={p.titulo}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
+                {post.capa_url && (
+                  <img
+                    src={post.capa_url}
+                    alt={post.titulo}
+                    loading="lazy"
+                    className="h-44 w-full object-cover sm:h-auto sm:w-56"
+                  />
                 )}
-                <div className="p-6 flex-1 flex flex-col">
-                  <span className="text-xs text-muted-foreground mb-2">
-                    {formatDate(p.data_publicacao)}
-                  </span>
-                  <h2 className="font-display font-bold text-xl mb-2 group-hover:text-primary transition-colors">
-                    {p.titulo}
-                  </h2>
-                  <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                    {p.resumo}
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {formatData(post.publicado_em)}
                   </p>
-                  <span className="mt-auto text-xs font-semibold text-primary inline-flex items-center gap-1">
-                    Ler artigo completo <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
+                  <h2 className="mt-1 text-lg font-bold leading-snug group-hover:text-primary">
+                    {post.titulo}
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {truncar(post.resumo ?? post.conteudo, 180)}
+                  </p>
                 </div>
               </Link>
             ))}
@@ -708,154 +615,196 @@ export function BlogIndexPage() {
   );
 }
 
+function renderBoldInline(str: string) {
+  return str.split(/(\*\*[^*]+\*\*)/g).map((part, idx) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={idx} className="font-semibold text-foreground">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      <span key={idx}>{part}</span>
+    )
+  );
+}
+
+function MarkdownContent({
+  texto,
+  className,
+}: {
+  texto: string;
+  className?: string;
+}) {
+  const blocos = (texto || "")
+    .split(/\n{2,}/)
+    .filter((b) => b.trim().length > 0);
+  return (
+    <div
+      className={cn(
+        "space-y-4 text-[15px] leading-relaxed text-foreground",
+        className
+      )}
+    >
+      {blocos.map((e, t) => {
+        const n = e.split("\n");
+        const r = `${t}-${e.slice(0, 12)}`;
+        if (e.startsWith("## ")) {
+          return (
+            <h2 key={r} className="pt-2 text-xl font-bold tracking-tight">
+              {e.replace(/^##\s+/, "")}
+            </h2>
+          );
+        }
+        if (e.startsWith("### ")) {
+          return (
+            <h3 key={r} className="pt-1 text-lg font-bold tracking-tight">
+              {e.replace(/^###\s+/, "")}
+            </h3>
+          );
+        }
+        if (n.every((l) => /^[-*]\s+/.test(l.trim()))) {
+          return (
+            <ul
+              key={r}
+              className="list-disc space-y-1.5 pl-5 text-muted-foreground"
+            >
+              {n.map((l, idx) => (
+                <li key={`${r}-${idx}`}>
+                  {renderBoldInline(l.replace(/^[-*]\s+/, ""))}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return (
+          <p key={r} className="text-muted-foreground">
+            {renderBoldInline(e)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function BlogPostPage() {
   const { slug } = useParams();
 
-  const { data, isLoading } = useQuery({
+  const { data: a, isLoading } = useQuery({
     queryKey: ["blog-post", slug],
     queryFn: () => apiCall<any>("post_by_slug", { slug }),
   });
 
   useEffect(() => {
-    if (data?.post) {
-      document.title = `${data.post.titulo} — DNA Ofertas`;
+    if (a?.post) {
+      document.title = `${a.post.titulo} — DNA Ofertas`;
     }
-  }, [data]);
+  }, [a]);
 
   if (isLoading) {
     return (
       <SiteLayout>
-        <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
-          Carregando artigo...
+        <div className="mx-auto max-w-3xl px-4 py-12 text-center text-sm text-muted-foreground">
+          Carregando artigo…
         </div>
       </SiteLayout>
     );
   }
 
-  if (!data?.post) {
+  if (!a?.post) {
     return (
       <SiteLayout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="font-display font-bold text-2xl mb-3">
-            Artigo não encontrado
-          </h1>
-          <Link to="/blog" className="text-primary font-semibold hover:underline">
-            Voltar ao blog
-          </Link>
+        <div className="mx-auto max-w-3xl px-4 py-12 text-center">
+          <h1 className="text-2xl font-extrabold">Post não encontrado</h1>
         </div>
       </SiteLayout>
     );
   }
 
-  const { post, produtos } = data;
+  const { post: f, relacionados: p = [] } = a;
+  const m =
+    typeof window !== "undefined"
+      ? window.location.href
+      : `/blog/${f.slug}`;
 
   return (
     <SiteLayout>
-      <article className="container mx-auto px-4 py-10 max-w-3xl">
-        <Link
-          to="/blog"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar para o blog
-        </Link>
-
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-          <Calendar className="w-3.5 h-3.5" /> Publicado em{" "}
-          {formatDate(post.data_publicacao)}
-        </div>
-
-        <h1 className="font-display font-extrabold text-3xl sm:text-4xl leading-tight mb-4">
-          {post.titulo}
+      <article className="mx-auto max-w-3xl px-4 py-8">
+        <p className="text-xs text-muted-foreground">
+          {formatData(f.publicado_em)}
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight">
+          {f.titulo}
         </h1>
-
-        {post.resumo ? (
-          <p className="text-lg text-muted-foreground mb-6">{post.resumo}</p>
-        ) : null}
-
-        <div className="mb-8">
-          <ShareButtons title={post.titulo} path={`/blog/${post.slug}`} />
-        </div>
-
-        {post.imagem_capa ? (
+        {f.resumo && (
+          <p className="mt-3 text-base text-muted-foreground">{f.resumo}</p>
+        )}
+        {f.capa_url && (
           <img
-            src={post.imagem_capa}
-            alt={post.titulo}
-            className="w-full rounded-2xl mb-8 max-h-[420px] object-cover border border-border"
+            src={f.capa_url}
+            alt={f.titulo}
+            className="mt-6 aspect-video w-full rounded-md object-cover"
           />
-        ) : null}
-
-        <div className="bg-card rounded-2xl border border-border p-6 sm:p-10 text-base leading-relaxed whitespace-pre-line text-foreground/90">
-          {post.conteudo}
+        )}
+        <MarkdownContent texto={f.conteudo} className="mt-6" />
+        <div className="mt-8 border-t border-border pt-6">
+          <ShareButtons titulo={f.titulo} url={m} />
         </div>
       </article>
 
-      {produtos.length > 0 && (
-        <section className="container mx-auto px-4 py-10">
-          <h2 className="font-display font-extrabold text-2xl mb-6">
-            Ofertas Recomendadas
-          </h2>
-          <GradeProdutos produtos={produtos} />
-        </section>
-      )}
+      <section className="mx-auto max-w-6xl px-4 pb-8">
+        <h2 className="text-xl font-extrabold tracking-tight">
+          Ofertas citadas na vitrine
+        </h2>
+        <div className="mt-4">
+          <GradeProdutos produtos={p} />
+        </div>
+      </section>
     </SiteLayout>
   );
 }
 
 export function SobrePage() {
   useEffect(() => {
-    document.title = "Sobre Nós — DNA Ofertas";
+    document.title = "Sobre o DNA Ofertas";
   }, []);
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <span className="text-xs font-bold uppercase tracking-wider text-primary">
-          Quem Somos
-        </span>
-        <h1 className="font-display font-extrabold text-3xl sm:text-5xl mt-1 mb-6">
-          Nosso DNA é encontrar economia real para você.
+      <div className="mx-auto max-w-3xl px-4 py-10">
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Sobre o DNA Ofertas
         </h1>
-        <div className="bg-card border border-border rounded-3xl p-8 space-y-5 text-muted-foreground leading-relaxed">
+        <div className="mt-6 space-y-4 text-sm leading-relaxed text-muted-foreground">
           <p>
-            O <strong className="text-foreground">DNA Ofertas</strong> nasceu com uma missão simples: separar promoções reais de falsos descontos. Todos os dias, nossa equipe monitora preços nas maiores e mais confiáveis lojas do Brasil para destacar apenas oportunidades que realmente valem o seu clique.
+            Somos uma vitrine independente de promoções. Todos os dias
+            acompanhamos os preços das principais lojas do Brasil e publicamos
+            apenas o que realmente tem desconto — sem "promoção" inflada nem
+            preço de referência inventado.
           </p>
+          <h2 className="pt-4 text-xl font-bold text-foreground">
+            Como escolhemos as ofertas
+          </h2>
           <p>
-            Trabalhamos com programas de afiliados oficiais (como Amazon, Mercado Livre, Magazine Luiza e Shopee). Isso significa que quando você compra através de um link nosso, podemos receber uma pequena comissão —{" "}
-            <strong className="text-foreground">
-              sem nenhum custo adicional para você
-            </strong>
-            .
+            Comparamos o preço atual com o histórico recente do produto,
+            verificamos a reputação da loja e confirmamos se o produto está
+            disponível antes de publicar. Ofertas que expiram saem da vitrine.
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <ShieldCheck className="w-8 h-8 text-primary mb-3" />
-            <h3 className="font-display font-bold text-lg mb-2">
-              100% Transparente
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Nunca alteramos preços. Você compra diretamente no site oficial da loja.
-            </p>
-          </div>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <Award className="w-8 h-8 text-accent mb-3" />
-            <h3 className="font-display font-bold text-lg mb-2">
-              Curadoria Manual
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Analisamos avaliações, reputação do vendedor e histórico de preço.
-            </p>
-          </div>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <Heart className="w-8 h-8 text-primary mb-3" />
-            <h3 className="font-display font-bold text-lg mb-2">
-              Foco no Consumidor
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Só recomendamos o que nós mesmos compraríamos.
-            </p>
-          </div>
+          <h2 className="pt-4 text-xl font-bold text-foreground">
+            Como ganhamos dinheiro
+          </h2>
+          <p>
+            Participamos de programas de afiliados. Quando você clica em um link
+            e compra, podemos receber uma comissão da loja — sem nenhum custo
+            extra para você. Isso nunca influencia a avaliação de um produto: a
+            comissão não muda o preço que você paga.
+          </p>
+          <h2 className="pt-4 text-xl font-bold text-foreground">
+            Preços e disponibilidade
+          </h2>
+          <p>
+            Preços e estoque são de responsabilidade das lojas parceiras e podem
+            mudar a qualquer momento. Sempre confirme o valor final na página da
+            loja antes de finalizar a compra.
+          </p>
         </div>
       </div>
     </SiteLayout>
@@ -863,73 +812,63 @@ export function SobrePage() {
 }
 
 export function ContatoPage() {
-  const { data: config } = useQuery({
+  const { data: e } = useQuery({
     queryKey: ["configuracoes"],
     queryFn: () => apiCall<any>("get_configuracoes"),
   });
 
   useEffect(() => {
-    document.title = "Contato — DNA Ofertas";
+    document.title = "Fale com a gente — DNA Ofertas";
   }, []);
 
   return (
     <SiteLayout>
-      <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <span className="text-xs font-bold uppercase tracking-wider text-primary">
-          Fale Conosco
-        </span>
-        <h1 className="font-display font-extrabold text-3xl sm:text-4xl mt-1 mb-4">
-          Entre em Contato
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Fale com a gente
         </h1>
-        <p className="text-muted-foreground mb-8">
-          Tem alguma dúvida, sugestão de oferta ou proposta de parceria? Fale com a nossa equipe pelos canais abaixo.
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          É uma loja e quer divulgar seus produtos? Encontrou um preço errado?
+          Quer sugerir um produto para a vitrine? Use um dos canais abaixo.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <Mail className="w-7 h-7 text-primary mb-3" />
-            <h3 className="font-display font-bold text-lg mb-1">E-mail</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Respondemos em até 24h úteis
-            </p>
-            <a
-              href={`mailto:${config?.email_contato || "contato@dnaofertas.com.br"}`}
-              className="text-sm font-semibold text-primary hover:underline"
+        <div className="mt-8 space-y-3">
+          {e?.whatsapp && (
+            <Button asChild size="lg" className="w-full justify-start">
+              <a
+                href={`https://wa.me/${e.whatsapp.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <MessageCircle className="size-4" />
+                Conversar no WhatsApp
+              </a>
+            </Button>
+          )}
+          {e?.instagram && (
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="w-full justify-start"
             >
-              {config?.email_contato || "contato@dnaofertas.com.br"}
-            </a>
-          </div>
-
-          {config?.link_whatsapp ? (
-            <a
-              href={config.link_whatsapp}
-              target="_blank"
-              rel="noreferrer"
-              className="bg-card border border-border rounded-2xl p-6 hover:border-accent transition-colors"
-            >
-              <MessageCircle className="w-7 h-7 text-accent mb-3" />
-              <h3 className="font-display font-bold text-lg mb-1">WhatsApp</h3>
-              <p className="text-sm text-muted-foreground">
-                Entre no nosso grupo VIP de ofertas
-              </p>
-            </a>
-          ) : null}
-
-          {config?.link_telegram ? (
-            <a
-              href={config.link_telegram}
-              target="_blank"
-              rel="noreferrer"
-              className="bg-card border border-border rounded-2xl p-6 hover:border-primary transition-colors"
-            >
-              <Send className="w-7 h-7 text-primary mb-3" />
-              <h3 className="font-display font-bold text-lg mb-1">Telegram</h3>
-              <p className="text-sm text-muted-foreground">
-                Receba alertas instantâneos
-              </p>
-            </a>
-          ) : null}
+              <a
+                href={`https://instagram.com/${e.instagram.replace(/^@/, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Instagram className="size-4" />
+                Mandar DM no Instagram
+              </a>
+            </Button>
+          )}
         </div>
+
+        <p className="mt-8 rounded-md border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground">
+          Respondemos em até 2 dias úteis. Não conseguimos alterar pedidos,
+          prazos de entrega ou trocas — essas solicitações precisam ser feitas
+          diretamente com a loja onde a compra foi concluída.
+        </p>
       </div>
     </SiteLayout>
   );

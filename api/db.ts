@@ -26,42 +26,41 @@ const PRODUTO_SELECT_FIELDS = `
   p.id,
   p.slug,
   p.titulo,
-  COALESCE(p.chamada, LEFT(p.descricao, 180)) AS descricao_curta,
-  p.descricao AS descricao_completa,
-  p.preco AS preco_atual,
-  p.preco_original AS preco_antigo,
-  CASE
-    WHEN p.preco_original IS NOT NULL AND p.preco_original > p.preco AND p.preco_original > 0
-    THEN ROUND(((p.preco_original - p.preco) / p.preco_original) * 100)::int
-    ELSE NULL
-  END AS desconto_percentual,
-  COALESCE(p.imagem_url, '') AS imagem_principal,
+  p.descricao,
+  p.preco,
+  p.preco_original,
+  p.moeda,
+  p.imagem_url,
   p.link_afiliado,
   p.loja,
   p.categoria_id,
   p.destaque,
   p.publicado,
   p.cliques_total,
+  p.chamada,
   p.cupom,
   p.forma_pagamento,
-  p.cupons,
-  4.8 AS avaliacao,
-  p.created_at AS data_publicacao,
+  COALESCE(p.cupons, '[]'::jsonb) AS cupons,
+  p.created_at,
+  p.updated_at,
   CASE WHEN c.id IS NOT NULL THEN json_build_object('nome', c.nome, 'slug', c.slug) ELSE NULL END AS categorias
 `;
 
-const POST_SELECT_FIELDS = `
-  id,
-  slug,
-  titulo,
-  resumo,
-  conteudo,
-  capa_url AS imagem_capa,
-  publicado,
-  COALESCE(publicado_em, created_at) AS data_publicacao,
-  created_at,
-  updated_at
-`;
+function detectStoreName(urlStr: string): string {
+  try {
+    const host = new URL(urlStr).hostname.toLowerCase();
+    if (host.includes("mercadolivre") || host.includes("meli.la")) return "Mercado Livre";
+    if (host.includes("amazon") || host.includes("amzn.to")) return "Amazon";
+    if (host.includes("shopee") || host.includes("s.shopee")) return "Shopee";
+    if (host.includes("magazineluiza") || host.includes("magalu")) return "Magalu";
+    if (host.includes("aliexpress")) return "AliExpress";
+    if (host.includes("kabum")) return "KaBuM!";
+    if (host.includes("casasbahia")) return "Casas Bahia";
+    return host.replace(/^www\./, "");
+  } catch {
+    return "Loja";
+  }
+}
 
 async function scrapeProductUrl(targetUrl: string) {
   const res = await fetch(targetUrl, {
@@ -73,6 +72,7 @@ async function scrapeProductUrl(targetUrl: string) {
     redirect: "follow",
   });
   const html = await res.text();
+  const finalUrl = res.url || targetUrl;
 
   const getMeta = (prop: string): string | null => {
     const r1 = new RegExp(
@@ -94,7 +94,7 @@ async function scrapeProductUrl(targetUrl: string) {
     getMeta("og:title") ||
     getMeta("twitter:title") ||
     (titleMatch ? titleMatch[1].trim() : "") ||
-    "Produto Importado";
+    "";
 
   const rawDesc =
     getMeta("og:description") ||
@@ -107,29 +107,30 @@ async function scrapeProductUrl(targetUrl: string) {
     getMeta("twitter:image") ||
     "";
 
-  let precoAtual: number | null = null;
+  let preco: number | null = null;
   const priceMeta =
     getMeta("product:price:amount") ||
     getMeta("og:price:amount");
   if (priceMeta) {
     const parsed = parseFloat(priceMeta.replace(",", "."));
-    if (!isNaN(parsed) && parsed > 0) precoAtual = parsed;
+    if (!isNaN(parsed) && parsed > 0) preco = parsed;
   }
-  if (!precoAtual) {
+  if (!preco) {
     const brlMatch = html.match(/R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/);
     if (brlMatch?.[1]) {
       const parsed = parseFloat(brlMatch[1].replace(/\./g, "").replace(",", "."));
-      if (!isNaN(parsed) && parsed > 0) precoAtual = parsed;
+      if (!isNaN(parsed) && parsed > 0) preco = parsed;
     }
   }
 
   return {
-    titulo: rawTitle.replace(/\s+/g, " ").trim().slice(0, 180),
-    descricao_curta: rawDesc.replace(/\s+/g, " ").trim().slice(0, 300) || null,
-    preco_atual: precoAtual || 0,
-    preco_antigo: null,
-    imagem_principal: rawImage,
+    titulo: rawTitle.replace(/\s+/g, " ").trim().slice(0, 200) || null,
+    descricao: rawDesc.replace(/\s+/g, " ").trim().slice(0, 1000) || null,
+    preco: preco,
+    preco_original: null,
+    imagem_url: rawImage || null,
     link_afiliado: targetUrl,
+    loja: detectStoreName(finalUrl),
   };
 }
 
@@ -161,7 +162,7 @@ export default async function handler(req: any, res: any) {
         [email || "", password || ""]
       );
       if (rows.length === 0) {
-        return res.status(401).json({ error: "E-mail ou senha inválidos." });
+        return res.status(401).json({ error: "E-mail ou senha incorretos." });
       }
       return res.status(200).json({ user: rows[0] });
     }
@@ -198,7 +199,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 4. Public: list_produtos
+    // 4. Public / Admin: list_produtos
     if (action === "list_produtos") {
       const {
         publicadoOnly = true,
@@ -270,24 +271,7 @@ export default async function handler(req: any, res: any) {
          LIMIT 1`,
         [slug]
       );
-      const produto = rows[0] || null;
-      if (!produto) {
-        return res.status(200).json({ data: null });
-      }
-      let relacionados: any[] = [];
-      if (produto.categoria_id) {
-        const { rows: relRows } = await client.query(
-          `SELECT ${PRODUTO_SELECT_FIELDS}
-           FROM public.produtos p
-           LEFT JOIN public.categorias c ON c.id = p.categoria_id
-           WHERE p.publicado = true AND p.categoria_id = $1 AND p.id <> $2
-           ORDER BY p.created_at DESC
-           LIMIT 4`,
-          [produto.categoria_id, produto.id]
-        );
-        relacionados = relRows;
-      }
-      return res.status(200).json({ data: { produto, relacionados } });
+      return res.status(200).json({ data: rows[0] || null });
     }
 
     // 6. Public / Admin: list_posts
@@ -301,7 +285,7 @@ export default async function handler(req: any, res: any) {
         limitSql = `LIMIT $${params.length}`;
       }
       const { rows } = await client.query(
-        `SELECT ${POST_SELECT_FIELDS} FROM public.posts ${whereSql} ORDER BY COALESCE(publicado_em, created_at) DESC ${limitSql}`,
+        `SELECT * FROM public.posts ${whereSql} ORDER BY COALESCE(publicado_em, created_at) DESC ${limitSql}`,
         params
       );
       return res.status(200).json({ data: rows });
@@ -311,7 +295,7 @@ export default async function handler(req: any, res: any) {
     if (action === "post_by_slug") {
       const { slug } = body;
       const { rows } = await client.query(
-        `SELECT ${POST_SELECT_FIELDS} FROM public.posts WHERE slug = $1 LIMIT 1`,
+        `SELECT * FROM public.posts WHERE slug = $1 LIMIT 1`,
         [slug]
       );
       const post = rows[0] || null;
@@ -326,7 +310,7 @@ export default async function handler(req: any, res: any) {
          ORDER BY p.created_at DESC
          LIMIT 4`
       );
-      return res.status(200).json({ data: { post, produtos: prodRows } });
+      return res.status(200).json({ data: { post, relacionados: prodRows } });
     }
 
     // 8. Public / Admin: get_configuracoes
@@ -334,26 +318,7 @@ export default async function handler(req: any, res: any) {
       const { rows } = await client.query(
         `SELECT * FROM public.configuracoes LIMIT 1`
       );
-      const row = rows[0];
-      if (!row) return res.status(200).json({ data: null });
-      return res.status(200).json({
-        data: {
-          ...row,
-          texto_rodape: `© ${new Date().getFullYear()} ${row.nome_site || "DNA Ofertas"}. Todos os direitos reservados.`,
-          email_contato: "contato@dna-ofertas.com",
-          link_whatsapp: row.whatsapp
-            ? row.whatsapp.startsWith("http")
-              ? row.whatsapp
-              : `https://wa.me/55${String(row.whatsapp).replace(/\D/g, "")}`
-            : null,
-          link_instagram: row.instagram
-            ? row.instagram.startsWith("http")
-              ? row.instagram
-              : `https://instagram.com/${String(row.instagram).replace(/^@/, "")}`
-            : null,
-          link_telegram: null,
-        },
-      });
+      return res.status(200).json({ data: rows[0] || null });
     }
 
     // 9. Admin: summary
@@ -391,41 +356,51 @@ export default async function handler(req: any, res: any) {
     // 11. Admin: upsert_produto
     if (action === "upsert_produto") {
       const p = body.produto || {};
-      const precoAtual = Number(p.preco_atual) || 0;
-      const precoAntigo =
-        p.preco_antigo !== null && p.preco_antigo !== undefined && p.preco_antigo !== ""
-          ? Number(p.preco_antigo)
+      const preco = p.preco !== null && p.preco !== undefined && p.preco !== "" ? Number(p.preco) : 0;
+      const precoOriginal =
+        p.preco_original !== null && p.preco_original !== undefined && p.preco_original !== ""
+          ? Number(p.preco_original)
           : null;
+      const cuponsArr = Array.isArray(p.cupons)
+        ? p.cupons.map((c: string) => String(c).trim()).filter(Boolean)
+        : [];
+      const primeiroCupom = cuponsArr[0] || p.cupom || null;
 
       if (p.id) {
         const { rows } = await client.query(
           `UPDATE public.produtos
            SET titulo = $1,
-               chamada = $2,
-               descricao = $3,
-               preco = $4,
-               preco_original = $5,
-               imagem_url = $6,
-               link_afiliado = $7,
-               categoria_id = $8,
-               destaque = $9,
-               publicado = $10,
-               cupom = $11,
+               descricao = $2,
+               preco = $3,
+               preco_original = $4,
+               imagem_url = $5,
+               link_afiliado = $6,
+               loja = $7,
+               chamada = $8,
+               cupom = $9,
+               cupons = $10::jsonb,
+               forma_pagamento = $11,
+               categoria_id = $12,
+               destaque = $13,
+               publicado = $14,
                updated_at = now()
-           WHERE id = $12
+           WHERE id = $15
            RETURNING *`,
           [
             p.titulo,
-            p.descricao_curta || null,
-            p.descricao_completa || p.descricao_curta || null,
-            precoAtual,
-            precoAntigo,
-            p.imagem_principal,
+            p.descricao || null,
+            preco,
+            precoOriginal,
+            p.imagem_url || null,
             p.link_afiliado,
+            p.loja || "Loja",
+            p.chamada || null,
+            primeiroCupom,
+            JSON.stringify(cuponsArr),
+            p.forma_pagamento || null,
             p.categoria_id || null,
             Boolean(p.destaque),
             p.publicado !== undefined ? Boolean(p.publicado) : true,
-            p.cupom || null,
             p.id,
           ]
         );
@@ -433,34 +408,31 @@ export default async function handler(req: any, res: any) {
       } else {
         let baseSlug = slugify(p.titulo || "produto");
         if (!baseSlug) baseSlug = "produto";
-        const { rows: existing } = await client.query(
-          `SELECT id FROM public.produtos WHERE slug = $1 LIMIT 1`,
-          [baseSlug]
-        );
-        if (existing.length > 0) {
-          baseSlug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
-        }
+        baseSlug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
         const { rows } = await client.query(
           `INSERT INTO public.produtos (
-             titulo, slug, chamada, descricao,
-             preco, preco_original,
-             imagem_url, link_afiliado, categoria_id,
-             destaque, publicado, cupom
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+             titulo, slug, descricao, preco, preco_original,
+             imagem_url, link_afiliado, loja, chamada,
+             cupom, cupons, forma_pagamento, categoria_id,
+             destaque, publicado
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,$14,$15)
            RETURNING *`,
           [
             p.titulo,
             baseSlug,
-            p.descricao_curta || null,
-            p.descricao_completa || p.descricao_curta || null,
-            precoAtual,
-            precoAntigo,
-            p.imagem_principal,
+            p.descricao || null,
+            preco,
+            precoOriginal,
+            p.imagem_url || null,
             p.link_afiliado,
+            p.loja || "Loja",
+            p.chamada || null,
+            primeiroCupom,
+            JSON.stringify(cuponsArr),
+            p.forma_pagamento || null,
             p.categoria_id || null,
             Boolean(p.destaque),
             p.publicado !== undefined ? Boolean(p.publicado) : true,
-            p.cupom || null,
           ]
         );
         return res.status(200).json({ data: rows[0] });
@@ -476,13 +448,13 @@ export default async function handler(req: any, res: any) {
 
     // 13. Admin: create_categoria
     if (action === "create_categoria") {
-      const { nome, descricao, icone } = body;
+      const { nome, descricao, icone, ordem } = body;
       const slug = slugify(nome || "categoria");
       const { rows } = await client.query(
-        `INSERT INTO public.categorias (nome, slug, descricao, icone)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO public.categorias (nome, slug, descricao, icone, ordem)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [nome, slug, descricao || null, icone || null]
+        [nome, slug, descricao || null, icone || null, ordem ?? 0]
       );
       return res.status(200).json({ data: rows[0] });
     }
@@ -512,7 +484,7 @@ export default async function handler(req: any, res: any) {
             post.titulo,
             post.resumo || null,
             post.conteudo || "",
-            post.imagem_capa || null,
+            post.capa_url || null,
             post.publicado !== undefined ? Boolean(post.publicado) : false,
             post.id,
           ]
@@ -536,7 +508,7 @@ export default async function handler(req: any, res: any) {
             slug,
             post.resumo || null,
             post.conteudo || "",
-            post.imagem_capa || null,
+            post.capa_url || null,
             post.publicado !== undefined ? Boolean(post.publicado) : false,
           ]
         );
@@ -558,18 +530,22 @@ export default async function handler(req: any, res: any) {
         `UPDATE public.configuracoes
          SET nome_site = $1,
              descricao_site = $2,
-             aviso_afiliado = $3,
-             whatsapp = $4,
-             instagram = $5,
+             whatsapp = $3,
+             instagram = $4,
+             facebook = $5,
+             tiktok = $6,
+             aviso_afiliado = $7,
              updated_at = now()
          WHERE id = true
          RETURNING *`,
         [
           cfg.nome_site || "DNA Ofertas",
-          cfg.descricao_site || null,
-          cfg.aviso_afiliado || null,
-          cfg.link_whatsapp || cfg.whatsapp || null,
-          cfg.link_instagram || cfg.instagram || null,
+          cfg.descricao_site || "",
+          cfg.whatsapp || null,
+          cfg.instagram || null,
+          cfg.facebook || null,
+          cfg.tiktok || null,
+          cfg.aviso_afiliado || "",
         ]
       );
       return res.status(200).json({ data: rows[0] });
