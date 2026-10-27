@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/__l5e/assets-v1/57c4af64-2169-4c2d-801b-036d891877fb/dna-ofertas-logo.jpg",
+      "destination": "/dna-ofertas-logo.jpg"
+    },
+    {
+      "source": "/ir/:id",
+      "destination": "/api/ir?id=:id"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
